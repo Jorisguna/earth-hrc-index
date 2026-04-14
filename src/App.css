@@ -1,0 +1,256 @@
+/* ── Layout ─────────────────────────────────────────────── */
+.app-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.map-container {
+  flex: 1;
+  position: relative;
+}
+
+/* ── Headline bar ────────────────────────────────────────── */
+.headline-bar {
+  position: relative;
+  z-index: 10;
+  background: rgba(10, 10, 10, 0.92);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0 24px;
+  height: 56px;
+  backdrop-filter: blur(8px);
+}
+
+.headline-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 20px;
+}
+
+.headline-number {
+  font-size: 20px;
+  font-weight: 700;
+  color: #C8D84A;
+  line-height: 1.1;
+}
+
+.headline-number.restoration {
+  color: #F4A623;
+}
+
+.headline-desc {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #888;
+  margin-top: 1px;
+}
+
+.headline-region {
+  font-size: 12px;
+  color: #666;
+  font-style: italic;
+}
+
+.headline-divider {
+  width: 1px;
+  height: 30px;
+  background: rgba(255,255,255,0.1);
+}
+
+.headline-loading {
+  font-size: 13px;
+  color: #888;
+}
+
+/* ── Error banner ────────────────────────────────────────── */
+.error-banner {
+  position: relative;
+  z-index: 10;
+  background: rgba(139, 37, 0, 0.9);
+  color: #fff;
+  font-size: 13px;
+  padding: 8px 24px;
+  text-align: center;
+}
+
+/* ── Legend ──────────────────────────────────────────────── */
+.legend {
+  position: absolute;
+  bottom: 32px;
+  left: 16px;
+  z-index: 10;
+  background: rgba(10, 10, 10, 0.88);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  padding: 12px 14px;
+  backdrop-filter: blur(8px);
+  min-width: 180px;
+}
+
+.legend-title {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #888;
+  margin-bottom: 8px;
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+
+.legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.legend-range {
+  font-size: 11px;
+  color: #aaa;
+  width: 30px;
+  flex-shrink: 0;
+}
+
+.legend-text {
+  font-size: 11px;
+  color: #ccc;
+}
+
+/* ── Bioregion card ──────────────────────────────────────── */
+.bioregion-card {
+  position: absolute;
+  top: 68px;
+  right: 16px;
+  z-index: 20;
+  width: 300px;
+  background: rgba(10, 10, 10, 0.95);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  padding: 20px 18px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+}
+
+.close-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 14px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 4px;
+}
+
+.close-btn:hover {
+  color: #ccc;
+}
+
+.hrc-score-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.hrc-score-number {
+  font-size: 52px;
+  font-weight: 800;
+  color: #C8D84A;
+  line-height: 1;
+  letter-spacing: -1px;
+}
+
+.hrc-score-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #888;
+  margin-top: 2px;
+}
+
+.hrc-score-status {
+  font-size: 13px;
+  color: #bbb;
+  margin-top: 4px;
+}
+
+.card-section {
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.card-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.card-row:last-child {
+  margin-bottom: 0;
+}
+
+.card-key {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #666;
+  flex-shrink: 0;
+  padding-top: 1px;
+}
+
+.card-val {
+  font-size: 13px;
+  color: #ddd;
+  text-align: right;
+}
+
+.card-note {
+  font-size: 11px;
+  color: #888;
+  line-height: 1.5;
+  margin-top: 6px;
+  font-style: italic;
+}
+
+.tier-badge {
+  display: inline-block;
+  background: rgba(200, 216, 74, 0.15);
+  color: #C8D84A;
+  border: 1px solid rgba(200, 216, 74, 0.3);
+  border-radius: 4px;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.restoration-gap {
+  color: #F4A623;
+  font-weight: 600;
+}
