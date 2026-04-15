@@ -12,11 +12,11 @@ import './App.css'
 // Free dark basemap from CARTO — no API key needed
 const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
 
-// Initial camera — centred on Wales
+// Initial camera — centred on the Atlantic to show Wales, Los Angeles and Barbados
 const INITIAL_VIEW_STATE = {
-  longitude: -3.8,
-  latitude: 52.4,
-  zoom: 7,
+  longitude: -62,
+  latitude: 35,
+  zoom: 3,
   pitch: 0,
   bearing: 0,
 }
@@ -59,7 +59,7 @@ function HeadlineBar({ tiles, loading }) {
       )}
       <div className="headline-divider" />
       <div className="headline-stat">
-        <span className="headline-region">Wales pilot — June 2023</span>
+        <span className="headline-region">Wales · Los Angeles · Barbados</span>
       </div>
     </div>
   )
