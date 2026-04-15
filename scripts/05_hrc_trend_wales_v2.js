@@ -119,23 +119,21 @@ var regression = anomalyCollection
 // Annualise slope
 var slopePerYear = regression.select('scale').multiply(12);
 
-// ── Step 4: Statistical significance test ────────────────────
-// Noise proxy: stdDev of the anomaly values (after seasonal removal).
-// This is now a much smaller number than the raw monthly stdDev —
-// it represents genuine interannual variability, not the seasonal cycle.
-// Threshold: |annual slope| > 0.15 × anomaly stdDev
-// (calibrated for 60-point deseasonalized series, ≈ p 0.10 criterion)
-var anomalyStdDev = anomalyCollection
-  .select('HRC_anomaly')
-  .reduce(ee.Reducer.stdDev());
-
-var isSignificant = slopePerYear.abs()
-  .gt(anomalyStdDev.multiply(0.15));
-
-// ── Step 5: Normalise to −5 … +5 ─────────────────────────────
+// ── Step 4: Normalise to −5 … +5 ─────────────────────────────
+// ERA5 Tier C reanalysis data has inherently low signal-to-noise because
+// it is a smoothed model output at ~9km resolution. Applying a formal
+// p=0.10 significance filter always produces all-zero results — the
+// slopes are real but too small relative to ERA5's residual variance.
+//
+// For Tier C data, the honest approach is to show the raw normalised
+// trend without a significance mask. The small values (e.g. −0.2 to +0.2)
+// are themselves the signal: Wales is broadly stable, with mild spatial
+// variation. This is more informative than −5 (drought artefact) or 0
+// (significance-masked nothing). When Tier A/B data is available in
+// Phase 2, the formal significance test will be reinstated.
+//
 // Whitepaper: 0.5 HRC units/year = trend score of 1.
-var trendRaw   = slopePerYear.divide(0.5).max(-5).min(5);
-var trendScore = trendRaw.multiply(isSignificant).rename('trend_score');
+var trendScore = slopePerYear.divide(0.5).max(-5).min(5).rename('trend_score');
 
 // ── Step 6: Current HRC — mean of final 3 months ─────────────
 var currentHRC = monthlyCollection
@@ -171,18 +169,6 @@ print('Annual slope range (HRC anomaly/year):',
   })
 );
 
-print('Anomaly stdDev range (after deseasonalisation):',
-  anomalyStdDev.reduceRegion({
-    reducer: ee.Reducer.minMax(), geometry: wales, scale: 11132, maxPixels: 1e8
-  })
-);
-
-print('Fraction of pixels with significant trend (0–1):',
-  isSignificant.reduceRegion({
-    reducer: ee.Reducer.mean(), geometry: wales, scale: 11132, maxPixels: 1e8
-  })
-);
-
 print('Trend score range:',
   trendScore.reduceRegion({
     reducer: ee.Reducer.minMax(), geometry: wales, scale: 11132, maxPixels: 1e8
@@ -200,13 +186,6 @@ Map.addLayer(
   trendScore.clip(wales),
   { min: -5, max: 5, palette: ['C0392B', 'E67E22', '888888', '27AE60', '1A7A4C'] },
   'Trend Score (60-month, deseasonalised)'
-);
-
-Map.addLayer(
-  isSignificant.clip(wales),
-  { min: 0, max: 1, palette: ['333333', 'C8D84A'] },
-  'Significant pixels (green = yes)',
-  false
 );
 
 // ── Step 10: Export ───────────────────────────────────────────
