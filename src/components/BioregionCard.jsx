@@ -23,11 +23,13 @@ function TrendArrow({ score }) {
   )
 }
 
-export default function BioregionCard({ tile, onClose, onInfo }) {
+export default function BioregionCard({ tile, onClose, onInfo, trendMode }) {
   if (!tile) return null
 
   const hrc = tile.hrc_score
   const label = hrcLabel(hrc)
+  const trendScore = trendMode === '60m' ? tile.trend_score_60m : tile.trend_score
+  const trendLabel = trendMode === '60m' ? 'Trend (60-month)' : 'Trend (24-month)'
 
   return (
     <div className="bioregion-card">
@@ -45,10 +47,10 @@ export default function BioregionCard({ tile, onClose, onInfo }) {
       <div className="card-section">
         <div className="card-row">
           <span className="card-key">
-            Trend
+            {trendLabel}
             <InfoBtn onClick={() => onInfo('trend')} />
           </span>
-          <span className="card-val"><TrendArrow score={tile.trend_score} /></span>
+          <span className="card-val"><TrendArrow score={trendScore} /></span>
         </div>
         <div className="card-row">
           <span className="card-key">

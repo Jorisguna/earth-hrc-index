@@ -255,6 +255,56 @@
   font-weight: 600;
 }
 
+/* ── Trend toggle ────────────────────────────────────────── */
+.trend-toggle {
+  position: absolute;
+  bottom: 32px;
+  left: 212px;   /* sits to the right of the legend */
+  z-index: 10;
+  background: rgba(10, 10, 10, 0.88);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  padding: 10px 12px;
+  backdrop-filter: blur(8px);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.trend-toggle-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #888;
+}
+
+.trend-toggle-btns {
+  display: flex;
+  gap: 4px;
+}
+
+.trend-toggle-btn {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 4px;
+  color: #888;
+  font-size: 11px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.trend-toggle-btn:hover {
+  color: #ccc;
+  border-color: rgba(255,255,255,0.2);
+}
+
+.trend-toggle-btn.active {
+  background: rgba(200, 216, 74, 0.15);
+  border-color: rgba(200, 216, 74, 0.4);
+  color: #C8D84A;
+}
+
 /* ── Info button (ⓘ) ─────────────────────────────────────── */
 .info-btn {
   display: inline-flex;

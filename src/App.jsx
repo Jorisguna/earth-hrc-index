@@ -30,6 +30,28 @@ function InfoBtn({ onClick }) {
   )
 }
 
+function TrendToggle({ trendMode, onChange }) {
+  return (
+    <div className="trend-toggle">
+      <span className="trend-toggle-label">Trend window</span>
+      <div className="trend-toggle-btns">
+        <button
+          className={`trend-toggle-btn ${trendMode === '24m' ? 'active' : ''}`}
+          onClick={() => onChange('24m')}
+        >
+          24-month
+        </button>
+        <button
+          className={`trend-toggle-btn ${trendMode === '60m' ? 'active' : ''}`}
+          onClick={() => onChange('60m')}
+        >
+          60-month
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function HeadlineBar({ tiles, loading, onInfo }) {
   if (loading) {
     return (
@@ -112,6 +134,7 @@ export default function App() {
   const [selectedTile, setSelectedTile] = useState(null)
   const [viewState, setViewState] = useState(INITIAL_VIEW_STATE)
   const [activeExplainer, setActiveExplainer] = useState(null)
+  const [trendMode, setTrendMode] = useState('60m')
 
   // Fetch all tiles from Supabase on load
   useEffect(() => {
@@ -198,11 +221,14 @@ export default function App() {
 
       <Legend />
 
+      <TrendToggle trendMode={trendMode} onChange={setTrendMode} />
+
       {selectedTile && (
         <BioregionCard
           tile={selectedTile}
           onClose={() => setSelectedTile(null)}
           onInfo={setActiveExplainer}
+          trendMode={trendMode}
         />
       )}
 
