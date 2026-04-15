@@ -5,6 +5,12 @@ function fmt(val, decimals = 2) {
   return Number(val).toFixed(decimals)
 }
 
+function InfoBtn({ onClick }) {
+  return (
+    <button className="info-btn" onClick={onClick} aria-label="Learn more">ⓘ</button>
+  )
+}
+
 function TrendArrow({ score }) {
   if (score === null || score === undefined) return <span style={{ color: '#999' }}>— unknown</span>
   const color = trendColor(score)
@@ -17,7 +23,7 @@ function TrendArrow({ score }) {
   )
 }
 
-export default function BioregionCard({ tile, onClose }) {
+export default function BioregionCard({ tile, onClose, onInfo }) {
   if (!tile) return null
 
   const hrc = tile.hrc_score
@@ -29,17 +35,26 @@ export default function BioregionCard({ tile, onClose }) {
 
       <div className="hrc-score-block">
         <span className="hrc-score-number">{fmt(hrc)}</span>
-        <span className="hrc-score-label">HRC Score</span>
+        <span className="hrc-score-label">
+          HRC Score
+          <InfoBtn onClick={() => onInfo('hrcScore')} />
+        </span>
         <span className="hrc-score-status">{label}</span>
       </div>
 
       <div className="card-section">
         <div className="card-row">
-          <span className="card-key">Trend</span>
+          <span className="card-key">
+            Trend
+            <InfoBtn onClick={() => onInfo('trend')} />
+          </span>
           <span className="card-val"><TrendArrow score={tile.trend_score} /></span>
         </div>
         <div className="card-row">
-          <span className="card-key">Confidence tier</span>
+          <span className="card-key">
+            Confidence tier
+            <InfoBtn onClick={() => onInfo('confidenceTier')} />
+          </span>
           <span className="card-val"><span className="tier-badge">{tile.confidence_tier || 'C'}</span></span>
         </div>
       </div>
@@ -47,12 +62,18 @@ export default function BioregionCard({ tile, onClose }) {
       {tile.ecoregion_name && (
         <div className="card-section">
           <div className="card-row">
-            <span className="card-key">Ecoregion</span>
+            <span className="card-key">
+              Ecoregion
+              <InfoBtn onClick={() => onInfo('ecoregion')} />
+            </span>
             <span className="card-val">{tile.ecoregion_name}</span>
           </div>
           {tile.biome_name && (
             <div className="card-row">
-              <span className="card-key">Biome</span>
+              <span className="card-key">
+                Biome
+                <InfoBtn onClick={() => onInfo('biome')} />
+              </span>
               <span className="card-val">{tile.biome_name}</span>
             </div>
           )}
@@ -62,7 +83,10 @@ export default function BioregionCard({ tile, onClose }) {
       {tile.restoration_gap !== null && tile.restoration_gap !== undefined && (
         <div className="card-section">
           <div className="card-row">
-            <span className="card-key">Restoration gap</span>
+            <span className="card-key">
+              Restoration gap
+              <InfoBtn onClick={() => onInfo('restorationGap')} />
+            </span>
             <span className="card-val restoration-gap">+{fmt(tile.restoration_gap)}</span>
           </div>
           <p className="card-note">
@@ -74,7 +98,10 @@ export default function BioregionCard({ tile, onClose }) {
 
       <div className="card-section">
         <div className="card-row">
-          <span className="card-key">Evaporative fraction</span>
+          <span className="card-key">
+            Evaporative fraction
+            <InfoBtn onClick={() => onInfo('evaporativeFraction')} />
+          </span>
           <span className="card-val">{fmt(tile.evaporative_fraction)}</span>
         </div>
         {tile.date_start && (

@@ -7,7 +7,9 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 
 import { supabase } from './lib/supabase'
 import { hrcColor } from './lib/hrcColor'
+import { explainers } from './lib/explainers'
 import BioregionCard from './components/BioregionCard'
+import InfoModal from './components/InfoModal'
 import './App.css'
 
 // Free dark basemap from CARTO — no API key needed
@@ -22,7 +24,13 @@ const INITIAL_VIEW_STATE = {
   bearing: 0,
 }
 
-function HeadlineBar({ tiles, loading }) {
+function InfoBtn({ onClick }) {
+  return (
+    <button className="info-btn" onClick={onClick} aria-label="Learn more">ⓘ</button>
+  )
+}
+
+function HeadlineBar({ tiles, loading, onInfo }) {
   if (loading) {
     return (
       <div className="headline-bar">
@@ -42,19 +50,28 @@ function HeadlineBar({ tiles, loading }) {
     <div className="headline-bar">
       <div className="headline-stat">
         <span className="headline-number">{mean.toFixed(2)}</span>
-        <span className="headline-desc">Mean HRC score</span>
+        <span className="headline-desc">
+          Mean HRC score
+          <InfoBtn onClick={() => onInfo('hrcScore')} />
+        </span>
       </div>
       <div className="headline-divider" />
       <div className="headline-stat">
         <span className="headline-number">{tiles.length}</span>
-        <span className="headline-desc">Tiles loaded</span>
+        <span className="headline-desc">
+          Tiles in view
+          <InfoBtn onClick={() => onInfo('tilesLoaded')} />
+        </span>
       </div>
       {meanGap !== null && (
         <>
           <div className="headline-divider" />
           <div className="headline-stat">
             <span className="headline-number restoration">+{meanGap.toFixed(2)}</span>
-            <span className="headline-desc">Mean restoration gap</span>
+            <span className="headline-desc">
+              Mean restoration gap
+              <InfoBtn onClick={() => onInfo('restorationGap')} />
+            </span>
           </div>
         </>
       )}
@@ -94,6 +111,7 @@ export default function App() {
   const [error, setError] = useState(null)
   const [selectedTile, setSelectedTile] = useState(null)
   const [viewState, setViewState] = useState(INITIAL_VIEW_STATE)
+  const [activeExplainer, setActiveExplainer] = useState(null)
 
   // Fetch all tiles from Supabase on load
   useEffect(() => {
@@ -157,7 +175,7 @@ export default function App() {
 
   return (
     <div className="app-container">
-      <HeadlineBar tiles={visibleTiles} loading={loading} />
+      <HeadlineBar tiles={visibleTiles} loading={loading} onInfo={setActiveExplainer} />
 
       {error && (
         <div className="error-banner">
@@ -184,6 +202,15 @@ export default function App() {
         <BioregionCard
           tile={selectedTile}
           onClose={() => setSelectedTile(null)}
+          onInfo={setActiveExplainer}
+        />
+      )}
+
+      {activeExplainer && (
+        <InfoModal
+          title={explainers[activeExplainer].title}
+          body={explainers[activeExplainer].body}
+          onClose={() => setActiveExplainer(null)}
         />
       )}
     </div>

@@ -254,3 +254,88 @@
   color: #F4A623;
   font-weight: 600;
 }
+
+/* ── Info button (ⓘ) ─────────────────────────────────────── */
+.info-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: #555;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0 0 0 4px;
+  line-height: 1;
+  vertical-align: middle;
+  transition: color 0.15s;
+}
+
+.info-btn:hover {
+  color: #C8D84A;
+}
+
+/* ── Info modal overlay ──────────────────────────────────── */
+.info-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  backdrop-filter: blur(4px);
+}
+
+.info-modal {
+  position: relative;
+  background: #111;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 28px 28px 24px;
+  max-width: 480px;
+  width: 100%;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7);
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.info-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+}
+
+.info-modal-close:hover {
+  color: #ccc;
+}
+
+.info-modal-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #C8D84A;
+  margin-bottom: 16px;
+  padding-right: 24px;
+  line-height: 1.3;
+}
+
+.info-modal-body p {
+  font-size: 13px;
+  color: #bbb;
+  line-height: 1.65;
+  margin: 0;
+}
+
+.info-modal-body br {
+  display: block;
+  margin: 6px 0;
+  content: '';
+}
