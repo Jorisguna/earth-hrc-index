@@ -102,7 +102,9 @@ export default function BioregionCard({ tile, onClose, onInfo }) {
             Evaporative fraction
             <InfoBtn onClick={() => onInfo('evaporativeFraction')} />
           </span>
-          <span className="card-val">{fmt(tile.evaporative_fraction)}</span>
+          <span className="card-val">
+            {fmt(tile.evaporative_fraction ?? (tile.hrc_score != null ? tile.hrc_score / 10 : null))}
+          </span>
         </div>
         {tile.date_start && (
           <div className="card-row">
