@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import DeckGL from '@deck.gl/react'
 import { ScatterplotLayer } from 'deck.gl'
+import { WebMercatorViewport } from '@deck.gl/core'
 import { Map } from 'react-map-gl/maplibre'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
@@ -112,6 +113,21 @@ export default function App() {
     fetchTiles()
   }, [])
 
+  // Filter tiles to only those visible in the current viewport
+  const visibleTiles = useMemo(() => {
+    if (!tiles.length) return tiles
+    const viewport = new WebMercatorViewport({
+      ...viewState,
+      width: window.innerWidth,
+      height: window.innerHeight - 56, // subtract headline bar height
+    })
+    const [minLon, minLat, maxLon, maxLat] = viewport.getBounds()
+    return tiles.filter(t =>
+      t.longitude >= minLon && t.longitude <= maxLon &&
+      t.latitude >= minLat && t.latitude <= maxLat
+    )
+  }, [tiles, viewState])
+
   const handleClick = useCallback((info) => {
     if (info && info.object) {
       setSelectedTile(info.object)
@@ -141,7 +157,7 @@ export default function App() {
 
   return (
     <div className="app-container">
-      <HeadlineBar tiles={tiles} loading={loading} />
+      <HeadlineBar tiles={visibleTiles} loading={loading} />
 
       {error && (
         <div className="error-banner">
