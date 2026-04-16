@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import DeckGL from '@deck.gl/react'
-import { ScatterplotLayer } from 'deck.gl'
 import { WebMercatorViewport } from '@deck.gl/core'
+import { H3HexagonLayer } from '@deck.gl/geo-layers'
+import { latLngToCell } from 'h3-js'
 import { Map } from 'react-map-gl/maplibre'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
@@ -256,7 +257,18 @@ export default function App() {
       console.error('Supabase fetch error:', error)
       setError('Could not load tile data. Please check your .env file.')
     } else {
-      setTiles(data || [])
+      // Snap each tile to its H3 cell (res 5 ≈ 9.8km edge, matching ERA5 scale).
+      // Deduplicate so no two tiles share the same hex — first one wins.
+      const seen = new Set()
+      const hexTiles = (data || []).reduce((acc, t) => {
+        const h3Index = latLngToCell(t.latitude, t.longitude, 5)
+        if (!seen.has(h3Index)) {
+          seen.add(h3Index)
+          acc.push({ ...t, h3Index })
+        }
+        return acc
+      }, [])
+      setTiles(hexTiles)
       setError(null)
     }
     setLoading(false)
@@ -281,26 +293,24 @@ export default function App() {
     }
   }, [])
 
-  const layer = new ScatterplotLayer({
+  const layer = new H3HexagonLayer({
     id: 'hrc-tiles',
     data: tiles,
-    getPosition: d => [d.longitude, d.latitude],
-    getRadius: 4800,           // slightly under half ERA5 grid spacing — leaves a clean gap
-    radiusUnits: 'meters',
-    radiusMinPixels: 3,
-    radiusMaxPixels: 80,       // grows at high zoom without overlapping neighbours
+    getHexagon: d => d.h3Index,
     getFillColor: d => [
       ...(viewMode === 'relative' ? gapColor(d.restoration_gap) : hrcColor(d.hrc_score)),
-      220,
+      140,
     ],
-    getLineColor: [0, 0, 0, 60],
+    getLineColor: [0, 0, 0, 80],
     lineWidthMinPixels: 0.5,
     stroked: true,
     filled: true,
     pickable: true,
     autoHighlight: true,
-    highlightColor: [255, 255, 255, 80],
+    highlightColor: [255, 255, 255, 60],
     onClick: handleClick,
+    elevationScale: 0,
+    extruded: false,
     updateTriggers: {
       getFillColor: viewMode,
     },
