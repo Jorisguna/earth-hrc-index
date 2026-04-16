@@ -285,10 +285,10 @@ export default function App() {
     id: 'hrc-tiles',
     data: tiles,
     getPosition: d => [d.longitude, d.latitude],
-    getRadius: 6000,           // ~6km to tile nicely at ERA5 ~9km grid
+    getRadius: 4800,           // slightly under half ERA5 grid spacing — leaves a clean gap
     radiusUnits: 'meters',
     radiusMinPixels: 3,
-    radiusMaxPixels: 40,
+    radiusMaxPixels: 80,       // grows at high zoom without overlapping neighbours
     getFillColor: d => [
       ...(viewMode === 'relative' ? gapColor(d.restoration_gap) : hrcColor(d.hrc_score)),
       220,
