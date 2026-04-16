@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import DeckGL from '@deck.gl/react'
 import { ScatterplotLayer } from 'deck.gl'
 import { WebMercatorViewport } from '@deck.gl/core'
@@ -228,39 +228,50 @@ export default function App() {
   const [activeExplainer, setActiveExplainer] = useState(null)
   const [trendMode, setTrendMode] = useState('60m')
   const [viewMode, setViewMode] = useState('absolute')
+  const debounceTimer = useRef(null)
 
-  // Fetch all tiles from Supabase on load
-  useEffect(() => {
-    async function fetchTiles() {
-      const { data, error } = await supabase
-        .from('hrc_tiles')
-        .select('*')
-
-      if (error) {
-        console.error('Supabase fetch error:', error)
-        setError('Could not load tile data. Please check your .env file.')
-      } else {
-        setTiles(data)
-      }
-      setLoading(false)
-    }
-    fetchTiles()
-  }, [])
-
-  // Filter tiles to only those visible in the current viewport
-  const visibleTiles = useMemo(() => {
-    if (!tiles.length) return tiles
+  // Fetch only tiles within the current viewport bounds from Supabase.
+  // This scales to large datasets — only what's on screen is ever loaded.
+  // Requires a composite index on (latitude, longitude) in Supabase for
+  // good performance at scale:
+  //   CREATE INDEX IF NOT EXISTS hrc_tiles_lat_lon ON hrc_tiles (latitude, longitude);
+  const fetchTilesForViewport = useCallback(async (vs) => {
     const viewport = new WebMercatorViewport({
-      ...viewState,
+      ...vs,
       width: window.innerWidth,
-      height: window.innerHeight - 56, // subtract headline bar height
+      height: window.innerHeight - 56,
     })
     const [minLon, minLat, maxLon, maxLat] = viewport.getBounds()
-    return tiles.filter(t =>
-      t.longitude >= minLon && t.longitude <= maxLon &&
-      t.latitude >= minLat && t.latitude <= maxLat
-    )
-  }, [tiles, viewState])
+
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('hrc_tiles')
+      .select('*')
+      .gte('latitude', minLat)
+      .lte('latitude', maxLat)
+      .gte('longitude', minLon)
+      .lte('longitude', maxLon)
+
+    if (error) {
+      console.error('Supabase fetch error:', error)
+      setError('Could not load tile data. Please check your .env file.')
+    } else {
+      setTiles(data || [])
+      setError(null)
+    }
+    setLoading(false)
+  }, [])
+
+  // Initial load
+  useEffect(() => {
+    fetchTilesForViewport(INITIAL_VIEW_STATE)
+  }, [fetchTilesForViewport])
+
+  const handleViewStateChange = useCallback(({ viewState: vs }) => {
+    setViewState(vs)
+    clearTimeout(debounceTimer.current)
+    debounceTimer.current = setTimeout(() => fetchTilesForViewport(vs), 400)
+  }, [fetchTilesForViewport])
 
   const handleClick = useCallback((info) => {
     if (info && info.object) {
@@ -298,7 +309,7 @@ export default function App() {
   return (
     <div className="app-container">
       <HeadlineBar
-        tiles={visibleTiles}
+        tiles={tiles}
         loading={loading}
         onInfo={setActiveExplainer}
         viewMode={viewMode}
@@ -314,7 +325,7 @@ export default function App() {
       <div className="map-container">
         <DeckGL
           viewState={viewState}
-          onViewStateChange={({ viewState: vs }) => setViewState(vs)}
+          onViewStateChange={handleViewStateChange}
           controller={true}
           layers={[layer]}
           onClick={handleClick}
