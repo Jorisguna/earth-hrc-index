@@ -95,13 +95,10 @@ function ModeIndicator({ viewMode }) {
 function RegionNav({ onFly }) {
   return (
     <div className="region-nav">
-      {REGIONS.map((r, i) => (
-        <span key={r.label}>
-          {i > 0 && <span className="region-nav-divider">·</span>}
-          <button className="region-nav-btn" onClick={() => onFly(r)}>
-            {r.label}
-          </button>
-        </span>
+      {REGIONS.map(r => (
+        <button key={r.label} className="region-nav-btn" onClick={() => onFly(r)}>
+          {r.label}
+        </button>
       ))}
     </div>
   )

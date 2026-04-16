@@ -400,32 +400,38 @@
 .region-nav {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 6px;
   padding: 0 20px;
 }
 
 .region-nav-btn {
-  background: none;
-  border: none;
-  color: #888;
-  font-size: 12px;
-  font-style: italic;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #ccc;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 500;
   cursor: pointer;
-  padding: 2px 4px;
-  border-radius: 3px;
-  transition: color 0.15s, background 0.15s;
+  padding: 4px 10px;
+  border-radius: 4px;
+  transition: all 0.15s;
+  letter-spacing: 0.03em;
+}
+
+.region-nav-btn::before {
+  content: '→ ';
+  opacity: 0.5;
+  font-style: normal;
 }
 
 .region-nav-btn:hover {
   color: #C8D84A;
+  border-color: rgba(200, 216, 74, 0.4);
   background: rgba(200, 216, 74, 0.08);
 }
 
-.region-nav-divider {
-  color: #444;
-  font-size: 12px;
-  padding: 0 2px;
-  pointer-events: none;
+.region-nav-btn:hover::before {
+  opacity: 1;
 }
 
 /* ── View toggle (in headline bar) ──────────────────────────── */
