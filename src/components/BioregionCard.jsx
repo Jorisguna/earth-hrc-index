@@ -78,7 +78,7 @@ export default function BioregionCard({ tile, onClose, onInfo, trendMode, viewMo
           <div className="card-row">
             <span className="card-key">
               {trendLabel}
-              <InfoBtn onClick={() => onInfo('trend')} />
+              <InfoBtn onClick={() => onInfo(trendMode === '60m' ? 'trend60m' : 'trend24m')} />
             </span>
             <span className="card-val"><TrendArrow score={trendScore} /></span>
           </div>
@@ -140,7 +140,7 @@ export default function BioregionCard({ tile, onClose, onInfo, trendMode, viewMo
         <div className="card-row">
           <span className="card-key">
             {trendLabel}
-            <InfoBtn onClick={() => onInfo('trend')} />
+            <InfoBtn onClick={() => onInfo(trendMode === '60m' ? 'trend60m' : 'trend24m')} />
           </span>
           <span className="card-val"><TrendArrow score={trendScore} /></span>
         </div>

@@ -56,23 +56,29 @@ function ViewToggle({ viewMode, onChange }) {
   )
 }
 
-function TrendToggle({ trendMode, onChange }) {
+function TrendToggle({ trendMode, onChange, onInfo }) {
   return (
     <div className="trend-toggle">
       <span className="trend-toggle-label">Trend window</span>
       <div className="trend-toggle-btns">
-        <button
-          className={`trend-toggle-btn ${trendMode === '24m' ? 'active' : ''}`}
-          onClick={() => onChange('24m')}
-        >
-          24-month
-        </button>
-        <button
-          className={`trend-toggle-btn ${trendMode === '60m' ? 'active' : ''}`}
-          onClick={() => onChange('60m')}
-        >
-          60-month
-        </button>
+        <div className="trend-toggle-option">
+          <button
+            className={`trend-toggle-btn ${trendMode === '24m' ? 'active' : ''}`}
+            onClick={() => onChange('24m')}
+          >
+            24-month
+          </button>
+          <InfoBtn onClick={() => onInfo('trend24m')} />
+        </div>
+        <div className="trend-toggle-option">
+          <button
+            className={`trend-toggle-btn ${trendMode === '60m' ? 'active' : ''}`}
+            onClick={() => onChange('60m')}
+          >
+            60-month
+          </button>
+          <InfoBtn onClick={() => onInfo('trend60m')} />
+        </div>
       </div>
     </div>
   )
@@ -380,7 +386,7 @@ export default function App() {
 
       <Legend viewMode={viewMode} />
 
-      <TrendToggle trendMode={trendMode} onChange={setTrendMode} />
+      <TrendToggle trendMode={trendMode} onChange={setTrendMode} onInfo={setActiveExplainer} />
 
       <ModeIndicator viewMode={viewMode} />
 

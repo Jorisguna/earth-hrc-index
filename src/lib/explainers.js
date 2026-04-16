@@ -50,10 +50,50 @@ It runs from −5 to +5:
   • −1 to −3 — slowly degrading (watch category)
   • −4 to −5 — rapidly degrading (intervention priority)
 
-How it is calculated:
-A linear regression is fitted to the monthly HRC values over a rolling 24-month window. The slope of that regression — the rate of change — is then normalised against the historical variability of the ecoregion, so that the score means the same thing regardless of whether the location is a stable boreal forest or a seasonally variable tropical grassland.
+Use the trend window toggle to switch between the 24-month and 60-month methodologies. Each answers a slightly different question about how the land is changing.`,
+  },
 
-Trends with low statistical confidence (p > 0.10) are shown as 0 rather than as a misleading signal.`,
+  trend24m: {
+    title: 'Trend Score — 24-Month Window',
+    body: `The 24-month trend measures the direction of HRC change over the most recent 2-year period.
+
+How it is calculated:
+A linear regression is fitted to monthly HRC values over 24 consecutive months. The slope — the rate of change in HRC per year — is normalised to a −5 to +5 scale where 0.5 HRC units/year equals a trend score of 1.
+
+Strengths:
+  • More responsive to recent land use changes and restoration interventions
+  • Useful for detecting events that have happened in the past 1–2 years
+  • Higher temporal resolution signal
+
+Limitations:
+  • A short window is more sensitive to year-to-year climate variability — a single drought year can produce a degradation signal that does not represent structural land change
+  • Less statistically stable than longer windows, particularly for ERA5 Tier C data
+
+Best used for: Recent event detection — new deforestation, active restoration, urban expansion within the past two years.`,
+  },
+
+  trend60m: {
+    title: 'Trend Score — 60-Month Deseasonalised',
+    body: `The 60-month trend uses a 5-year window with deseasonalisation applied before regression — the scientifically preferred method for ERA5 Tier C data.
+
+How it is calculated:
+For each month in the 5-year record, the climatological mean for that calendar month (the average of all 5 Januaries, all 5 Februaries, etc.) is subtracted before the regression is fitted. This removes the seasonal cycle — the summer/winter HRC swing — so the regression measures only year-on-year structural change.
+
+  Anomaly = observed HRC − long-run monthly mean
+  Trend = linear regression slope on anomalies × 12 months ÷ 0.5
+
+Current data window: June 2018 – May 2023.
+
+Strengths:
+  • Far more statistically stable than the 24-month window
+  • Seasonal noise (summer highs, winter lows) is fully removed before regression
+  • The standard approach used in GLEAM and MODIS land degradation literature
+  • Reliably distinguishes genuine land condition change from climate variability
+
+Limitations:
+  • Slower to reflect very recent changes — a restoration project completed 12 months ago may not yet register clearly in a 5-year trend
+
+Best used for: Identifying structural, multi-year trends in land surface condition. The recommended window for interpreting ERA5 Tier C data.`,
   },
 
   confidenceTier: {
