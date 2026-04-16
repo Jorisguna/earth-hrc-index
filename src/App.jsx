@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import DeckGL from '@deck.gl/react'
-import { WebMercatorViewport } from '@deck.gl/core'
+import { WebMercatorViewport, FlyToInterpolator } from '@deck.gl/core'
 import { H3HexagonLayer } from '@deck.gl/geo-layers'
 import { latLngToCell } from 'h3-js'
 import { Map } from 'react-map-gl/maplibre'
@@ -24,6 +24,12 @@ const INITIAL_VIEW_STATE = {
   pitch: 0,
   bearing: 0,
 }
+
+const REGIONS = [
+  { label: 'Wales',       longitude: -3.8,    latitude: 52.4,  zoom: 8  },
+  { label: 'Los Angeles', longitude: -118.25, latitude: 34.05, zoom: 9  },
+  { label: 'Barbados',    longitude: -59.55,  latitude: 13.2,  zoom: 11 },
+]
 
 function InfoBtn({ onClick }) {
   return (
@@ -80,16 +86,33 @@ function ModeIndicator({ viewMode }) {
   )
 }
 
-function HeadlineBar({ tiles, loading, onInfo, viewMode, onViewChange }) {
-  if (loading) {
+function RegionNav({ onFly }) {
+  return (
+    <div className="region-nav">
+      {REGIONS.map((r, i) => (
+        <span key={r.label}>
+          {i > 0 && <span className="region-nav-divider">·</span>}
+          <button className="region-nav-btn" onClick={() => onFly(r)}>
+            {r.label}
+          </button>
+        </span>
+      ))}
+    </div>
+  )
+}
+
+function HeadlineBar({ tiles, loading, onInfo, viewMode, onViewChange, onFly }) {
+  if (loading || !tiles.length) {
     return (
       <div className="headline-bar">
-        <span className="headline-loading">Loading HRC data…</span>
+        <span className="headline-loading">
+          {loading ? 'Loading HRC data…' : 'Navigate to a pilot region to load data'}
+        </span>
+        <RegionNav onFly={onFly} />
         <ViewToggle viewMode={viewMode} onChange={onViewChange} />
       </div>
     )
   }
-  if (!tiles.length) return null
 
   const tilesWithGap = tiles.filter(t => t.restoration_gap !== null && t.restoration_gap !== undefined)
   const meanGap = tilesWithGap.length
@@ -128,9 +151,7 @@ function HeadlineBar({ tiles, loading, onInfo, viewMode, onViewChange }) {
           </span>
         </div>
         <div className="headline-divider" />
-        <div className="headline-stat">
-          <span className="headline-region">Wales · Los Angeles · Barbados</span>
-        </div>
+        <RegionNav onFly={onFly} />
         <ViewToggle viewMode={viewMode} onChange={onViewChange} />
       </div>
     )
@@ -168,9 +189,7 @@ function HeadlineBar({ tiles, loading, onInfo, viewMode, onViewChange }) {
         </>
       )}
       <div className="headline-divider" />
-      <div className="headline-stat">
-        <span className="headline-region">Wales · Los Angeles · Barbados</span>
-      </div>
+      <RegionNav onFly={onFly} />
       <ViewToggle viewMode={viewMode} onChange={onViewChange} />
     </div>
   )
@@ -279,6 +298,17 @@ export default function App() {
     fetchTilesForViewport(INITIAL_VIEW_STATE)
   }, [fetchTilesForViewport])
 
+  const flyTo = useCallback((region) => {
+    setViewState(vs => ({
+      ...vs,
+      longitude: region.longitude,
+      latitude: region.latitude,
+      zoom: region.zoom,
+      transitionDuration: 1200,
+      transitionInterpolator: new FlyToInterpolator(),
+    }))
+  }, [])
+
   const handleViewStateChange = useCallback(({ viewState: vs }) => {
     setViewState(vs)
     clearTimeout(debounceTimer.current)
@@ -324,6 +354,7 @@ export default function App() {
         onInfo={setActiveExplainer}
         viewMode={viewMode}
         onViewChange={setViewMode}
+        onFly={flyTo}
       />
 
       {error && (

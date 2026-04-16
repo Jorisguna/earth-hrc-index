@@ -390,6 +390,38 @@
   content: '';
 }
 
+/* ── Region nav buttons (in headline bar) ───────────────────── */
+.region-nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 20px;
+}
+
+.region-nav-btn {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 12px;
+  font-style: italic;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.region-nav-btn:hover {
+  color: #C8D84A;
+  background: rgba(200, 216, 74, 0.08);
+}
+
+.region-nav-divider {
+  color: #444;
+  font-size: 12px;
+  padding: 0 2px;
+  pointer-events: none;
+}
+
 /* ── View toggle (in headline bar) ──────────────────────────── */
 .view-toggle {
   margin-left: auto;
