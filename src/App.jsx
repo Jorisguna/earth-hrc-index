@@ -6,7 +6,7 @@ import { Map } from 'react-map-gl/maplibre'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
 import { supabase } from './lib/supabase'
-import { hrcColor } from './lib/hrcColor'
+import { hrcColor, gapColor } from './lib/hrcColor'
 import { explainers } from './lib/explainers'
 import BioregionCard from './components/BioregionCard'
 import InfoModal from './components/InfoModal'
@@ -27,6 +27,25 @@ const INITIAL_VIEW_STATE = {
 function InfoBtn({ onClick }) {
   return (
     <button className="info-btn" onClick={onClick} aria-label="Learn more">ⓘ</button>
+  )
+}
+
+function ViewToggle({ viewMode, onChange }) {
+  return (
+    <div className="view-toggle">
+      <button
+        className={`view-toggle-btn ${viewMode === 'absolute' ? 'active' : ''}`}
+        onClick={() => onChange('absolute')}
+      >
+        Absolute
+      </button>
+      <button
+        className={`view-toggle-btn ${viewMode === 'relative' ? 'active' : ''}`}
+        onClick={() => onChange('relative')}
+      >
+        Relative
+      </button>
+    </div>
   )
 }
 
@@ -52,21 +71,71 @@ function TrendToggle({ trendMode, onChange }) {
   )
 }
 
-function HeadlineBar({ tiles, loading, onInfo }) {
+function ModeIndicator({ viewMode }) {
+  return (
+    <div className={`mode-indicator${viewMode === 'relative' ? ' mode-indicator-relative' : ''}`}>
+      {viewMode === 'absolute' ? 'Global comparison' : 'Ecoregion-relative'}
+    </div>
+  )
+}
+
+function HeadlineBar({ tiles, loading, onInfo, viewMode, onViewChange }) {
   if (loading) {
     return (
       <div className="headline-bar">
         <span className="headline-loading">Loading HRC data…</span>
+        <ViewToggle viewMode={viewMode} onChange={onViewChange} />
       </div>
     )
   }
   if (!tiles.length) return null
 
-  const mean = tiles.reduce((sum, t) => sum + (t.hrc_score || 0), 0) / tiles.length
   const tilesWithGap = tiles.filter(t => t.restoration_gap !== null && t.restoration_gap !== undefined)
   const meanGap = tilesWithGap.length
     ? tilesWithGap.reduce((sum, t) => sum + t.restoration_gap, 0) / tilesWithGap.length
     : null
+
+  if (viewMode === 'relative') {
+    const priorityCount = tilesWithGap.filter(t => t.restoration_gap > 1.0).length
+    const atReferenceCount = tilesWithGap.filter(t => t.restoration_gap <= 0.1).length
+
+    return (
+      <div className="headline-bar">
+        {meanGap !== null && (
+          <div className="headline-stat">
+            <span className="headline-number restoration">+{meanGap.toFixed(2)}</span>
+            <span className="headline-desc">
+              Mean restoration gap
+              <InfoBtn onClick={() => onInfo('restorationGap')} />
+            </span>
+          </div>
+        )}
+        <div className="headline-divider" />
+        <div className="headline-stat">
+          <span className="headline-number">{priorityCount}</span>
+          <span className="headline-desc">
+            Priority tiles (gap &gt; 1.0)
+            <InfoBtn onClick={() => onInfo('priorityTiles')} />
+          </span>
+        </div>
+        <div className="headline-divider" />
+        <div className="headline-stat">
+          <span className="headline-number">{atReferenceCount}</span>
+          <span className="headline-desc">
+            At reference (gap ≤ 0.1)
+            <InfoBtn onClick={() => onInfo('atReference')} />
+          </span>
+        </div>
+        <div className="headline-divider" />
+        <div className="headline-stat">
+          <span className="headline-region">Wales · Los Angeles · Barbados</span>
+        </div>
+        <ViewToggle viewMode={viewMode} onChange={onViewChange} />
+      </div>
+    )
+  }
+
+  const mean = tiles.reduce((sum, t) => sum + (t.hrc_score || 0), 0) / tiles.length
 
   return (
     <div className="headline-bar">
@@ -101,16 +170,39 @@ function HeadlineBar({ tiles, loading, onInfo }) {
       <div className="headline-stat">
         <span className="headline-region">Wales · Los Angeles · Barbados</span>
       </div>
+      <ViewToggle viewMode={viewMode} onChange={onViewChange} />
     </div>
   )
 }
 
-function Legend() {
+function Legend({ viewMode }) {
+  if (viewMode === 'relative') {
+    const stops = [
+      { label: '0.0',     color: '#085041', text: 'At ecoregion reference' },
+      { label: '0–0.5',   color: '#1D9E75', text: 'Minor gap' },
+      { label: '0.5–1.5', color: '#C8D84A', text: 'Moderate gap' },
+      { label: '1.5–2.5', color: '#F4A623', text: 'Significant gap' },
+      { label: '2.5+',    color: '#8B2500', text: 'Severe gap' },
+    ]
+    return (
+      <div className="legend legend-relative">
+        <div className="legend-title">Restoration Gap</div>
+        {stops.map(s => (
+          <div key={s.label} className="legend-row">
+            <span className="legend-swatch" style={{ background: s.color }} />
+            <span className="legend-range">{s.label}</span>
+            <span className="legend-text">{s.text}</span>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   const stops = [
-    { label: '0–2', color: '#8B2500', text: 'Severely degraded' },
-    { label: '2–4', color: '#D4550A', text: 'Degraded' },
-    { label: '4–6', color: '#F4A623', text: 'Moderate' },
-    { label: '6–8', color: '#C8D84A', text: 'Healthy' },
+    { label: '0–2',  color: '#8B2500', text: 'Severely degraded' },
+    { label: '2–4',  color: '#D4550A', text: 'Degraded' },
+    { label: '4–6',  color: '#F4A623', text: 'Moderate' },
+    { label: '6–8',  color: '#C8D84A', text: 'Healthy' },
     { label: '8–10', color: '#1D9E75', text: 'High capacity' },
   ]
   return (
@@ -135,6 +227,7 @@ export default function App() {
   const [viewState, setViewState] = useState(INITIAL_VIEW_STATE)
   const [activeExplainer, setActiveExplainer] = useState(null)
   const [trendMode, setTrendMode] = useState('60m')
+  const [viewMode, setViewMode] = useState('absolute')
 
   // Fetch all tiles from Supabase on load
   useEffect(() => {
@@ -185,7 +278,10 @@ export default function App() {
     radiusUnits: 'meters',
     radiusMinPixels: 3,
     radiusMaxPixels: 40,
-    getFillColor: d => [...hrcColor(d.hrc_score), 220],  // slight transparency
+    getFillColor: d => [
+      ...(viewMode === 'relative' ? gapColor(d.restoration_gap) : hrcColor(d.hrc_score)),
+      220,
+    ],
     getLineColor: [0, 0, 0, 60],
     lineWidthMinPixels: 0.5,
     stroked: true,
@@ -194,11 +290,20 @@ export default function App() {
     autoHighlight: true,
     highlightColor: [255, 255, 255, 80],
     onClick: handleClick,
+    updateTriggers: {
+      getFillColor: viewMode,
+    },
   })
 
   return (
     <div className="app-container">
-      <HeadlineBar tiles={visibleTiles} loading={loading} onInfo={setActiveExplainer} />
+      <HeadlineBar
+        tiles={visibleTiles}
+        loading={loading}
+        onInfo={setActiveExplainer}
+        viewMode={viewMode}
+        onViewChange={setViewMode}
+      />
 
       {error && (
         <div className="error-banner">
@@ -219,9 +324,11 @@ export default function App() {
         </DeckGL>
       </div>
 
-      <Legend />
+      <Legend viewMode={viewMode} />
 
       <TrendToggle trendMode={trendMode} onChange={setTrendMode} />
+
+      <ModeIndicator viewMode={viewMode} />
 
       {selectedTile && (
         <BioregionCard
@@ -229,6 +336,7 @@ export default function App() {
           onClose={() => setSelectedTile(null)}
           onInfo={setActiveExplainer}
           trendMode={trendMode}
+          viewMode={viewMode}
         />
       )}
 

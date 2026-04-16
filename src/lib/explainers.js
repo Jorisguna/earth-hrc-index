@@ -122,6 +122,49 @@ How to read it:
 This is the most actionable number in the system. It tells investors, restoration practitioners, and municipal planners not just how degraded a place is, but how much cooling capacity could be recovered — and therefore what the return on a restoration investment could be in physical terms.`,
   },
 
+  priorityTiles: {
+    title: 'Priority Tiles — Intervention Threshold',
+    body: `A priority tile is any location where the restoration gap exceeds 1.0 HRC points.
+
+A gap of 1.0 means the location is performing more than one full unit below the best intact sites in its ecoregion. At this threshold, the degradation is large enough to be ecologically meaningful and potentially recoverable through active restoration or land management change.
+
+Priority tiles are the most actionable locations in the system:
+  • They have demonstrated cooling capacity that has been lost
+  • They sit within an ecoregion where recovery to a higher level is proven to be possible
+  • They represent the highest return locations for restoration investment in physical terms
+
+Tiles with a gap below 1.0 may still benefit from protection or light management, but they are performing reasonably close to their ecological potential.`,
+  },
+
+  atReference: {
+    title: 'At Reference — Performing at Ecoregion Potential',
+    body: `A tile is classed as "at reference" when its restoration gap is 0.1 or less — meaning it is performing within 0.1 HRC points of the best intact sites in its ecoregion.
+
+These tiles represent the ecological benchmark for their landscape type. They are:
+  • The most intact remaining sites in their ecoregion
+  • The reference points used to calculate restoration gaps for all other tiles
+  • Locations where the priority is protection rather than restoration
+
+The reference is defined as the 90th percentile HRC score of tiles within formally protected areas (national parks, nature reserves, IUCN categories I–IV) within the same ecoregion. It is not a theoretical maximum — it is a level that demonstrably exists on Earth today.
+
+Protecting at-reference tiles is as important as restoring degraded ones: they are the ecological baseline the entire scoring system depends on.`,
+  },
+
+  ecoregionReference: {
+    title: 'Ecoregion Reference Score',
+    body: `The ecoregion reference is the HRC score that the best intact sites in this ecoregion are currently achieving. It represents the ecological ceiling — the maximum biological cooling capacity that is realistically attainable for this landscape type under current climate conditions.
+
+How it is calculated:
+The reference is the 90th percentile HRC score of tiles within formally protected areas (IUCN categories I–IV) in the same ecoregion. This means 90% of intact, protected sites in this ecoregion score at or below this level — it is achievable, but represents high ecological performance.
+
+Why it matters:
+  • A Mojave desert reference of ~2.2 confirms that low HRC scores in arid land are ecologically correct — not degraded
+  • A coastal chaparral reference of ~3.6 means LA tiles scoring 2.4 have genuinely lost cooling capacity relative to what intact chaparral achieves
+  • The restoration gap is simply: Reference − This tile's current score
+
+The reference is recalculated as new data enters the system. It is not fixed — it reflects the current state of the best remaining natural sites in each ecoregion.`,
+  },
+
   evaporativeFraction: {
     title: 'Evaporative Fraction',
     body: `The evaporative fraction is the raw physical measurement that the HRC score is built on. It is a fundamental quantity in surface energy balance science.

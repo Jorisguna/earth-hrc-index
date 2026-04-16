@@ -19,6 +19,16 @@ export function trendColor(score) {
   return '#1A7A4C'
 }
 
+// Returns an [R, G, B] array for a given restoration gap value (0 = at reference, higher = more degraded)
+export function gapColor(gap) {
+  if (gap === null || gap === undefined) return [136, 135, 128] // #888780 — no data
+  if (gap <= 0.05) return [8, 80, 65]    // #085041 — at ecoregion reference
+  if (gap < 0.5)   return [29, 158, 117] // #1D9E75 — minor gap
+  if (gap < 1.5)   return [200, 216, 74] // #C8D84A — moderate gap
+  if (gap < 2.5)   return [244, 166, 35] // #F4A623 — significant gap
+  return [139, 37, 0]                     // #8B2500 — severe gap
+}
+
 // Returns a plain-English label for an HRC score
 export function hrcLabel(score) {
   if (score === null || score === undefined) return 'Unknown'

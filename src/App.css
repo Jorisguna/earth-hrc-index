@@ -259,7 +259,7 @@
 .trend-toggle {
   position: absolute;
   bottom: 32px;
-  left: 212px;   /* sits to the right of the legend */
+  left: 264px;   /* sits to the right of the legend (relative view legend is ~240px wide) */
   z-index: 10;
   background: rgba(10, 10, 10, 0.88);
   border: 1px solid rgba(255,255,255,0.08);
@@ -388,4 +388,62 @@
   display: block;
   margin: 6px 0;
   content: '';
+}
+
+/* ── View toggle (in headline bar) ──────────────────────────── */
+.view-toggle {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+  padding: 0 0 0 16px;
+}
+
+.view-toggle-btn {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 4px;
+  color: #888;
+  font-size: 11px;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.view-toggle-btn:hover {
+  color: #ccc;
+  border-color: rgba(255,255,255,0.2);
+}
+
+.view-toggle-btn.active {
+  background: rgba(200, 216, 74, 0.15);
+  border-color: rgba(200, 216, 74, 0.4);
+  color: #C8D84A;
+}
+
+/* ── Mode indicator pill ─────────────────────────────────────── */
+.mode-indicator {
+  position: absolute;
+  bottom: 32px;
+  right: 16px;
+  z-index: 10;
+  background: rgba(10, 10, 10, 0.88);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #666;
+  backdrop-filter: blur(8px);
+}
+
+.mode-indicator-relative {
+  border-color: rgba(29, 158, 117, 0.4);
+  color: #1D9E75;
+}
+
+/* ── Legend relative view — wider range labels ───────────────── */
+.legend-relative .legend-range {
+  width: 50px;
 }

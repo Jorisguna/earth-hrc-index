@@ -23,7 +23,7 @@ function TrendArrow({ score }) {
   )
 }
 
-export default function BioregionCard({ tile, onClose, onInfo, trendMode }) {
+export default function BioregionCard({ tile, onClose, onInfo, trendMode, viewMode }) {
   if (!tile) return null
 
   const hrc = tile.hrc_score
@@ -31,6 +31,98 @@ export default function BioregionCard({ tile, onClose, onInfo, trendMode }) {
   const trendScore = trendMode === '60m' ? tile.trend_score_60m : tile.trend_score
   const trendLabel = trendMode === '60m' ? 'Trend (60-month)' : 'Trend (24-month)'
 
+  // ── Relative view — restoration gap leads ────────────────────
+  if (viewMode === 'relative') {
+    const gap = tile.restoration_gap
+    const reference = gap != null && hrc != null ? hrc + gap : null
+
+    return (
+      <div className="bioregion-card">
+        <button className="close-btn" onClick={onClose} aria-label="Close">✕</button>
+
+        <div className="hrc-score-block">
+          <span className="hrc-score-number" style={{ color: '#F4A623' }}>
+            {gap != null ? `+${fmt(gap)}` : '—'}
+          </span>
+          <span className="hrc-score-label">
+            Restoration Gap
+            <InfoBtn onClick={() => onInfo('restorationGap')} />
+          </span>
+          {gap != null && (
+            <span className="hrc-score-status">
+              {fmt(gap)} pts below ecoregion reference
+            </span>
+          )}
+        </div>
+
+        <div className="card-section">
+          <div className="card-row">
+            <span className="card-key">
+              HRC Score
+              <InfoBtn onClick={() => onInfo('hrcScore')} />
+            </span>
+            <span className="card-val">{fmt(hrc)} / 10</span>
+          </div>
+          {reference != null && (
+            <div className="card-row">
+              <span className="card-key">
+                Ecoregion reference
+                <InfoBtn onClick={() => onInfo('ecoregionReference')} />
+              </span>
+              <span className="card-val">{fmt(reference)} / 10</span>
+            </div>
+          )}
+        </div>
+
+        <div className="card-section">
+          <div className="card-row">
+            <span className="card-key">
+              {trendLabel}
+              <InfoBtn onClick={() => onInfo('trend')} />
+            </span>
+            <span className="card-val"><TrendArrow score={trendScore} /></span>
+          </div>
+          <div className="card-row">
+            <span className="card-key">
+              Confidence tier
+              <InfoBtn onClick={() => onInfo('confidenceTier')} />
+            </span>
+            <span className="card-val"><span className="tier-badge">{tile.confidence_tier || 'C'}</span></span>
+          </div>
+        </div>
+
+        {tile.ecoregion_name && (
+          <div className="card-section">
+            <div className="card-row">
+              <span className="card-key">
+                Ecoregion
+                <InfoBtn onClick={() => onInfo('ecoregion')} />
+              </span>
+              <span className="card-val">{tile.ecoregion_name}</span>
+            </div>
+            {tile.biome_name && (
+              <div className="card-row">
+                <span className="card-key">
+                  Biome
+                  <InfoBtn onClick={() => onInfo('biome')} />
+                </span>
+                <span className="card-val">{tile.biome_name}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="card-section">
+          <div className="card-row">
+            <span className="card-key">Coordinates</span>
+            <span className="card-val">{fmt(tile.latitude, 4)}°N, {fmt(tile.longitude, 4)}°E</span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Absolute view — HRC score leads (original layout) ────────
   return (
     <div className="bioregion-card">
       <button className="close-btn" onClick={onClose} aria-label="Close">✕</button>
