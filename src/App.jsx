@@ -325,7 +325,9 @@ export default function App() {
 
   const layer = new H3HexagonLayer({
     id: 'hrc-tiles',
-    data: tiles,
+    // In relative view, exclude tiles with no ecoregion reference (coastal/sea tiles).
+    // They have valid HRC scores but no restoration gap, so grey tiles would mislead.
+    data: viewMode === 'relative' ? tiles.filter(t => t.restoration_gap != null) : tiles,
     getHexagon: d => d.h3Index,
     getFillColor: d => [
       ...(viewMode === 'relative' ? gapColor(d.restoration_gap) : hrcColor(d.hrc_score)),
