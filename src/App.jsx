@@ -29,6 +29,8 @@ const REGIONS = [
   { label: 'Wales',       longitude: -3.8,    latitude: 52.4,  zoom: 8  },
   { label: 'Los Angeles', longitude: -118.25, latitude: 34.05, zoom: 9  },
   { label: 'Barbados',    longitude: -59.55,  latitude: 13.2,  zoom: 11 },
+  { label: 'Assam',       longitude: 92.9,    latitude: 26.2,  zoom: 8  },
+  { label: 'SF Bay',      longitude: -122.1,  latitude: 37.7,  zoom: 9  },
 ]
 
 function InfoBtn({ onClick }) {
