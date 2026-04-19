@@ -32,10 +32,10 @@ var monthlyCollection = ee.ImageCollection.fromImages(
       .filterBounds(region)
       .mean();
 
+    // True net radiation: thermal is negative (outgoing longwave) — do NOT abs() it.
     var latentHeat = era5.select('surface_latent_heat_flux_sum').abs();
-    var solarRad   = era5.select('surface_net_solar_radiation_sum').abs();
-    var thermalRad = era5.select('surface_net_thermal_radiation_sum').abs();
-    var netRad     = solarRad.add(thermalRad);
+    var netRad     = era5.select('surface_net_solar_radiation_sum')
+                      .add(era5.select('surface_net_thermal_radiation_sum'));
     var netRadSafe = netRad.where(netRad.lte(0), 0.001);
     var ef         = latentHeat.divide(netRadSafe).min(1).max(0);
     var hrc        = ef.multiply(10).rename('HRC_score').toFloat();
@@ -115,17 +115,11 @@ samplePoints = samplePoints.map(function(f) {
 // ── Step 6: Add ecoregion from RESOLVE 2017 ──────────────────
 var resolve = ee.FeatureCollection('RESOLVE/ECOREGIONS/2017');
 
-var withEcoregion = ee.Join.saveFirst('ecoregion').apply({
-  primary:   samplePoints,
-  secondary: resolve,
-  condition: ee.Filter.intersects('.geo', '.geo')
-});
-
-samplePoints = withEcoregion.map(function(f) {
-  var eco = ee.Feature(f.get('ecoregion'));
+samplePoints = samplePoints.map(function(f) {
+  var eco = resolve.filterBounds(f.geometry()).first();
   return f.set({
-    ecoregion_name: eco.get('ECO_NAME'),
-    biome_name:     eco.get('BIOME_NAME')
+    ecoregion_name: ee.Algorithms.If(eco, eco.get('ECO_NAME'), null),
+    biome_name:     ee.Algorithms.If(eco, eco.get('BIOME_NAME'), null)
   });
 });
 
