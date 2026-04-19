@@ -205,6 +205,29 @@ Why it matters:
 The reference is recalculated as new data enters the system. It is not fixed — it reflects the current state of the best remaining natural sites in each ecoregion.`,
   },
 
+  historicalBaseline: {
+    title: 'Historical Baseline — 2001–2010 Spring Mean',
+    body: `The historical baseline is the mean spring (March–May) HRC score for this tile over the decade 2001–2010, computed from the same ERA5 reanalysis dataset used for current scores.
+
+How it is calculated:
+For each year from 2001 to 2010, the March, April, and May monthly HRC values are computed using the standard evaporative fraction formula. The mean of all 30 monthly values (10 years × 3 months) gives the baseline.
+
+  HRC = (Latent heat flux ÷ Net radiation) × 10
+  Baseline = mean of March–May HRC values, 2001–2010
+
+Why spring?
+Spring (March–May) is the season when vegetation activity is ramping up and evapotranspiration is most sensitive to land condition changes. It is the window that most clearly distinguishes degraded land from recovering or intact land in temperate climates like Wales.
+
+Change since baseline:
+  • A negative value (orange) means this tile is cooling less effectively than it was in 2001–2010 — a signal of land degradation, vegetation loss, or drying.
+  • A positive value (green) means this tile has improved its cooling capacity since the baseline period — a signal of recovery, afforestation, or improved land management.
+  • Near zero means the land is in roughly the same condition as the early 2000s.
+
+Data source: ECMWF ERA5-Land daily aggregates (Tier C reanalysis). The baseline uses identical methodology to current scores so comparisons are internally consistent.
+
+Note: The historical baseline is currently available for Wales only. Coverage will be extended to all pilot regions in a subsequent data release.`,
+  },
+
   evaporativeFraction: {
     title: 'Evaporative Fraction',
     body: `The evaporative fraction is the raw physical measurement that the HRC score is built on. It is a fundamental quantity in surface energy balance science.

@@ -190,6 +190,30 @@ export default function BioregionCard({ tile, onClose, onInfo, trendMode, viewMo
         </div>
       )}
 
+      {tile.hrc_historical_reference != null && (
+        <div className="card-section">
+          <div className="card-row">
+            <span className="card-key">
+              Historical baseline
+              <InfoBtn onClick={() => onInfo('historicalBaseline')} />
+            </span>
+            <span className="card-val">{fmt(tile.hrc_historical_reference)} / 10</span>
+          </div>
+          <div className="card-row">
+            <span className="card-key">
+              Change since 2001–10
+              <InfoBtn onClick={() => onInfo('historicalBaseline')} />
+            </span>
+            <span className="card-val" style={{
+              color: (hrc - tile.hrc_historical_reference) >= 0 ? '#1D9E75' : '#E67E22'
+            }}>
+              {(hrc - tile.hrc_historical_reference) >= 0 ? '+' : ''}
+              {fmt(hrc - tile.hrc_historical_reference)}
+            </span>
+          </div>
+        </div>
+      )}
+
       <div className="card-section">
         <div className="card-row">
           <span className="card-key">
