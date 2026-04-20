@@ -225,7 +225,7 @@ Change since baseline:
 
 Data source: ECMWF ERA5-Land daily aggregates (Tier C reanalysis). The baseline uses identical methodology to current scores so comparisons are internally consistent.
 
-Note: The historical baseline is currently available for Wales only. Coverage will be extended to all pilot regions in a subsequent data release.`,
+Note: The historical baseline is currently available for Wales, Assam, and the San Francisco Bay Area. Coverage will be extended to all pilot regions in a subsequent data release.`,
   },
 
   evaporativeFraction: {
