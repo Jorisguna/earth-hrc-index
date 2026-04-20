@@ -491,3 +491,60 @@
 .legend-relative .legend-range {
   width: 50px;
 }
+
+.legend-subtitle {
+  font-size: 10px;
+  color: #555;
+  margin-top: 8px;
+  line-height: 1.4;
+  font-style: italic;
+}
+
+/* ── Gap mode toggle (shown in headline bar when in gap view) ─── */
+.gap-mode-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border-left: 1px solid rgba(255,255,255,0.08);
+  border-right: 1px solid rgba(255,255,255,0.08);
+}
+
+.gap-mode-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #555;
+  white-space: nowrap;
+}
+
+.gap-mode-btns {
+  display: flex;
+  gap: 3px;
+}
+
+.gap-mode-btn {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 4px;
+  color: #777;
+  font-size: 11px;
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.gap-mode-btn:hover {
+  color: #bbb;
+  border-color: rgba(255,255,255,0.18);
+}
+
+.gap-mode-btn.active {
+  background: rgba(244, 166, 35, 0.15);
+  border-color: rgba(244, 166, 35, 0.4);
+  color: #F4A623;
+}

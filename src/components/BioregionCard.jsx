@@ -23,7 +23,40 @@ function TrendArrow({ score }) {
   )
 }
 
-export default function BioregionCard({ tile, onClose, onInfo, trendMode, viewMode }) {
+// Returns the active gap value, reference value, and display labels for
+// the three reference systems.
+function getGapContext(tile, gapMode) {
+  const hrc = tile.hrc_score
+  if (gapMode === 'historical') {
+    return {
+      gap:          tile.restoration_gap_historical,
+      reference:    tile.hrc_historical_reference,
+      refLabel:     '2001–2010 baseline',
+      gapNote:      'This location has lost this many HRC points since its 2001–2010 mean.',
+      explainerKey: 'historicalBaseline',
+    }
+  }
+  if (gapMode === 'ceiling') {
+    return {
+      gap:          tile.restoration_gap_ceiling,
+      reference:    tile.hrc_ceiling_reference,
+      refLabel:     'PM physical ceiling',
+      gapNote:      'This is the full physical cooling potential the local climate allows.',
+      explainerKey: 'pmCeiling',
+    }
+  }
+  // intact (default)
+  const gap = tile.restoration_gap
+  return {
+    gap,
+    reference:    gap != null && hrc != null ? hrc + gap : null,
+    refLabel:     'Ecoregion reference',
+    gapNote:      'This location could recover this many HRC points if restored to the reference condition for its ecoregion.',
+    explainerKey: 'restorationGap',
+  }
+}
+
+export default function BioregionCard({ tile, onClose, onInfo, trendMode, viewMode, gapMode }) {
   if (!tile) return null
 
   const hrc = tile.hrc_score
@@ -31,10 +64,9 @@ export default function BioregionCard({ tile, onClose, onInfo, trendMode, viewMo
   const trendScore = trendMode === '60m' ? tile.trend_score_60m : tile.trend_score
   const trendLabel = trendMode === '60m' ? 'Trend (60-month)' : 'Trend (24-month)'
 
-  // ── Relative view — restoration gap leads ────────────────────
+  // ── Gap view — restoration gap leads ────────────────────────
   if (viewMode === 'relative') {
-    const gap = tile.restoration_gap
-    const reference = gap != null && hrc != null ? hrc + gap : null
+    const { gap, reference, refLabel, gapNote, explainerKey } = getGapContext(tile, gapMode)
 
     return (
       <div className="bioregion-card">
@@ -46,11 +78,11 @@ export default function BioregionCard({ tile, onClose, onInfo, trendMode, viewMo
           </span>
           <span className="hrc-score-label">
             Restoration Gap
-            <InfoBtn onClick={() => onInfo('restorationGap')} />
+            <InfoBtn onClick={() => onInfo(explainerKey)} />
           </span>
           {gap != null && (
             <span className="hrc-score-status">
-              {fmt(gap)} pts below ecoregion reference
+              {fmt(gap)} pts below {refLabel}
             </span>
           )}
         </div>
@@ -66,11 +98,14 @@ export default function BioregionCard({ tile, onClose, onInfo, trendMode, viewMo
           {reference != null && (
             <div className="card-row">
               <span className="card-key">
-                Ecoregion reference
-                <InfoBtn onClick={() => onInfo('ecoregionReference')} />
+                {refLabel}
+                <InfoBtn onClick={() => onInfo(explainerKey)} />
               </span>
               <span className="card-val">{fmt(reference)} / 10</span>
             </div>
+          )}
+          {gap != null && (
+            <p className="card-note">{gapNote}</p>
           )}
         </div>
 
@@ -122,7 +157,7 @@ export default function BioregionCard({ tile, onClose, onInfo, trendMode, viewMo
     )
   }
 
-  // ── Absolute view — HRC score leads (original layout) ────────
+  // ── Absolute view — HRC score leads ─────────────────────────
   return (
     <div className="bioregion-card">
       <button className="close-btn" onClick={onClose} aria-label="Close">✕</button>
@@ -184,8 +219,7 @@ export default function BioregionCard({ tile, onClose, onInfo, trendMode, viewMo
             <span className="card-val restoration-gap">+{fmt(tile.restoration_gap)}</span>
           </div>
           <p className="card-note">
-            This location could recover {fmt(tile.restoration_gap)} HRC points if restored
-            to the reference condition for its ecoregion.
+            vs. best intact sites in this ecoregion today
           </p>
         </div>
       )}
@@ -209,6 +243,24 @@ export default function BioregionCard({ tile, onClose, onInfo, trendMode, viewMo
             }}>
               {(hrc - tile.hrc_historical_reference) >= 0 ? '+' : ''}
               {fmt(hrc - tile.hrc_historical_reference)}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {tile.hrc_ceiling_reference != null && (
+        <div className="card-section">
+          <div className="card-row">
+            <span className="card-key">
+              PM ceiling
+              <InfoBtn onClick={() => onInfo('pmCeiling')} />
+            </span>
+            <span className="card-val">{fmt(tile.hrc_ceiling_reference)} / 10</span>
+          </div>
+          <div className="card-row">
+            <span className="card-key">Gap to ceiling</span>
+            <span className="card-val restoration-gap">
+              +{fmt(tile.restoration_gap_ceiling ?? Math.max(tile.hrc_ceiling_reference - hrc, 0))}
             </span>
           </div>
         </div>

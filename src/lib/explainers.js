@@ -225,7 +225,38 @@ Change since baseline:
 
 Data source: ECMWF ERA5-Land daily aggregates (Tier C reanalysis). The baseline uses identical methodology to current scores so comparisons are internally consistent.
 
-Note: The historical baseline is currently available for Wales, Assam, and the San Francisco Bay Area. Coverage will be extended to all pilot regions in a subsequent data release.`,
+Note: The historical baseline is currently available for Wales and the San Francisco Bay Area.`,
+  },
+
+  pmCeiling: {
+    title: 'PM Ceiling — Penman-Monteith Physical Maximum',
+    body: `The Penman-Monteith (PM) ceiling is the theoretical upper bound on evaporative cooling that the local climate can physically support, assuming perfect land cover and unlimited water supply.
+
+It answers a different question from the ecoregion reference or historical baseline: not "what have these sites achieved?" but "what is the absolute physical maximum this climate allows?"
+
+How it is calculated:
+The FAO-56 Penman-Monteith reference evapotranspiration equation is applied using ERA5 climate variables over the same 60-month window (June 2018 – May 2023) used for current HRC scores:
+
+  ETo = (0.408 × Δ × Rn + γ × (900/(T+273)) × u₂ × (es−ea))
+        ÷ (Δ + γ × (1 + 0.34 × u₂))
+
+Where:
+  • Δ = slope of the saturation vapour pressure curve
+  • Rn = net radiation (W/m²)
+  • γ = psychrometric constant
+  • T = mean temperature (°C)
+  • u₂ = wind speed at 2m (m/s)
+  • es = saturation vapour pressure (kPa)
+  • ea = actual vapour pressure from dewpoint (kPa)
+
+The PM-ET is converted to a latent heat flux (W/m²) and divided by net radiation to give the EF ceiling, which is multiplied by 10 to give the HRC ceiling.
+
+How to interpret the gap to ceiling:
+  • A gap to ceiling of +1.5 means the land could recover 1.5 HRC points with optimal restoration — but even with perfect land cover, climate limits prevent it going higher
+  • The ceiling gap is always larger than the ecoregion reference gap — it represents the full physical opportunity, not just what other sites have achieved
+
+Why it matters:
+The PM ceiling is the number relevant to investors asking the maximum possible return on a restoration investment. The ecoregion reference shows what is currently achievable; the ceiling shows what physics permits.`,
   },
 
   evaporativeFraction: {

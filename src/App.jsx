@@ -16,7 +16,7 @@ import './App.css'
 // Free dark basemap from CARTO — no API key needed
 const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
 
-// Initial camera — centred on the Atlantic to show Wales, Los Angeles and Barbados
+// Initial camera — centred on the Atlantic to show Wales and SF Bay
 const INITIAL_VIEW_STATE = {
   longitude: -62,
   latitude: 35,
@@ -28,10 +28,27 @@ const INITIAL_VIEW_STATE = {
 const REGIONS = [
   { label: 'Wales',       longitude: -3.8,    latitude: 52.4,  zoom: 8  },
   { label: 'Los Angeles', longitude: -118.25, latitude: 34.05, zoom: 9  },
-  { label: 'Barbados',    longitude: -59.55,  latitude: 13.2,  zoom: 11 },
-  { label: 'Assam',       longitude: 92.9,    latitude: 26.2,  zoom: 8  },
   { label: 'SF Bay',      longitude: -122.1,  latitude: 37.7,  zoom: 9  },
 ]
+
+// Maps gapMode to the DB column name used for restoration gap
+function getGapField(gapMode) {
+  if (gapMode === 'historical') return 'restoration_gap_historical'
+  if (gapMode === 'ceiling')    return 'restoration_gap_ceiling'
+  return 'restoration_gap'
+}
+
+const GAP_MODE_LABELS = {
+  intact:     'Intact site',
+  historical: 'Historical',
+  ceiling:    'PM Ceiling',
+}
+
+const GAP_MODE_DESCRIPTIONS = {
+  intact:     'vs. best current intact sites in this ecoregion',
+  historical: 'vs. this region\'s mean cooling in 2001–2010',
+  ceiling:    'vs. theoretical Penman-Monteith physical maximum',
+}
 
 function InfoBtn({ onClick }) {
   return (
@@ -52,8 +69,37 @@ function ViewToggle({ viewMode, onChange }) {
         className={`view-toggle-btn ${viewMode === 'relative' ? 'active' : ''}`}
         onClick={() => onChange('relative')}
       >
-        Relative
+        Gap view
       </button>
+    </div>
+  )
+}
+
+function GapModeToggle({ gapMode, onChange, onInfo }) {
+  return (
+    <div className="gap-mode-toggle">
+      <span className="gap-mode-label">Reference</span>
+      <div className="gap-mode-btns">
+        <button
+          className={`gap-mode-btn ${gapMode === 'intact' ? 'active' : ''}`}
+          onClick={() => onChange('intact')}
+        >
+          Intact site
+        </button>
+        <button
+          className={`gap-mode-btn ${gapMode === 'historical' ? 'active' : ''}`}
+          onClick={() => onChange('historical')}
+        >
+          Historical
+        </button>
+        <button
+          className={`gap-mode-btn ${gapMode === 'ceiling' ? 'active' : ''}`}
+          onClick={() => onChange('ceiling')}
+        >
+          PM Ceiling
+          <InfoBtn onClick={(e) => { e.stopPropagation(); onInfo('pmCeiling') }} />
+        </button>
+      </div>
     </div>
   )
 }
@@ -86,10 +132,17 @@ function TrendToggle({ trendMode, onChange, onInfo }) {
   )
 }
 
-function ModeIndicator({ viewMode }) {
+function ModeIndicator({ viewMode, gapMode }) {
+  if (viewMode === 'absolute') {
+    return (
+      <div className="mode-indicator">
+        Global comparison
+      </div>
+    )
+  }
   return (
-    <div className={`mode-indicator${viewMode === 'relative' ? ' mode-indicator-relative' : ''}`}>
-      {viewMode === 'absolute' ? 'Global comparison' : 'Ecoregion-relative'}
+    <div className="mode-indicator mode-indicator-relative">
+      Gap vs. {GAP_MODE_LABELS[gapMode]}
     </div>
   )
 }
@@ -106,7 +159,9 @@ function RegionNav({ onFly }) {
   )
 }
 
-function HeadlineBar({ tiles, loading, onInfo, viewMode, onViewChange, onFly }) {
+function HeadlineBar({ tiles, loading, onInfo, viewMode, onViewChange, gapMode, onGapModeChange, onFly }) {
+  const gapField = getGapField(gapMode)
+
   if (loading || !tiles.length) {
     return (
       <div className="headline-bar">
@@ -114,19 +169,21 @@ function HeadlineBar({ tiles, loading, onInfo, viewMode, onViewChange, onFly }) 
           {loading ? 'Loading HRC data…' : 'Navigate to a pilot region to load data'}
         </span>
         <RegionNav onFly={onFly} />
+        {viewMode === 'relative' && (
+          <GapModeToggle gapMode={gapMode} onChange={onGapModeChange} onInfo={onInfo} />
+        )}
         <ViewToggle viewMode={viewMode} onChange={onViewChange} />
       </div>
     )
   }
 
-  const tilesWithGap = tiles.filter(t => t.restoration_gap !== null && t.restoration_gap !== undefined)
-  const meanGap = tilesWithGap.length
-    ? tilesWithGap.reduce((sum, t) => sum + t.restoration_gap, 0) / tilesWithGap.length
-    : null
-
   if (viewMode === 'relative') {
-    const priorityCount = tilesWithGap.filter(t => t.restoration_gap > 1.0).length
-    const atReferenceCount = tilesWithGap.filter(t => t.restoration_gap <= 0.1).length
+    const tilesWithGap = tiles.filter(t => t[gapField] != null)
+    const meanGap = tilesWithGap.length
+      ? tilesWithGap.reduce((sum, t) => sum + t[gapField], 0) / tilesWithGap.length
+      : null
+    const priorityCount = tilesWithGap.filter(t => t[gapField] > 1.0).length
+    const atReferenceCount = tilesWithGap.filter(t => t[gapField] <= 0.1).length
 
     return (
       <div className="headline-bar">
@@ -157,11 +214,17 @@ function HeadlineBar({ tiles, loading, onInfo, viewMode, onViewChange, onFly }) 
         </div>
         <div className="headline-divider" />
         <RegionNav onFly={onFly} />
+        <GapModeToggle gapMode={gapMode} onChange={onGapModeChange} onInfo={onInfo} />
         <ViewToggle viewMode={viewMode} onChange={onViewChange} />
       </div>
     )
   }
 
+  // Absolute view
+  const tilesWithGap = tiles.filter(t => t.restoration_gap != null)
+  const meanGap = tilesWithGap.length
+    ? tilesWithGap.reduce((sum, t) => sum + t.restoration_gap, 0) / tilesWithGap.length
+    : null
   const mean = tiles.reduce((sum, t) => sum + (t.hrc_score || 0), 0) / tiles.length
 
   return (
@@ -200,10 +263,11 @@ function HeadlineBar({ tiles, loading, onInfo, viewMode, onViewChange, onFly }) 
   )
 }
 
-function Legend({ viewMode }) {
+function Legend({ viewMode, gapMode }) {
   if (viewMode === 'relative') {
+    const title = `Restoration Gap — ${GAP_MODE_LABELS[gapMode]}`
     const stops = [
-      { label: '0.0',     color: '#085041', text: 'At ecoregion reference' },
+      { label: '0.0',     color: '#085041', text: 'At reference' },
       { label: '0–0.5',   color: '#1D9E75', text: 'Minor gap' },
       { label: '0.5–1.5', color: '#C8D84A', text: 'Moderate gap' },
       { label: '1.5–2.5', color: '#F4A623', text: 'Significant gap' },
@@ -211,7 +275,7 @@ function Legend({ viewMode }) {
     ]
     return (
       <div className="legend legend-relative">
-        <div className="legend-title">Restoration Gap</div>
+        <div className="legend-title">{title}</div>
         {stops.map(s => (
           <div key={s.label} className="legend-row">
             <span className="legend-swatch" style={{ background: s.color }} />
@@ -219,6 +283,7 @@ function Legend({ viewMode }) {
             <span className="legend-text">{s.text}</span>
           </div>
         ))}
+        <div className="legend-subtitle">{GAP_MODE_DESCRIPTIONS[gapMode]}</div>
       </div>
     )
   }
@@ -253,6 +318,7 @@ export default function App() {
   const [activeExplainer, setActiveExplainer] = useState(null)
   const [trendMode, setTrendMode] = useState('60m')
   const [viewMode, setViewMode] = useState('absolute')
+  const [gapMode, setGapMode] = useState('intact')
   const debounceTimer = useRef(null)
 
   // Fetch only tiles within the current viewport bounds from Supabase.
@@ -328,14 +394,17 @@ export default function App() {
     }
   }, [])
 
+  const gapField = getGapField(gapMode)
+
   const layer = new H3HexagonLayer({
     id: 'hrc-tiles',
-    // In relative view, exclude tiles with no ecoregion reference (coastal/sea tiles).
-    // They have valid HRC scores but no restoration gap, so grey tiles would mislead.
-    data: viewMode === 'relative' ? tiles.filter(t => t.restoration_gap != null) : tiles,
+    // In gap view, exclude tiles with no value for the active gap reference.
+    data: viewMode === 'relative'
+      ? tiles.filter(t => t[gapField] != null)
+      : tiles,
     getHexagon: d => d.h3Index,
     getFillColor: d => [
-      ...(viewMode === 'relative' ? gapColor(d.restoration_gap) : hrcColor(d.hrc_score)),
+      ...(viewMode === 'relative' ? gapColor(d[gapField]) : hrcColor(d.hrc_score)),
       140,
     ],
     getLineColor: [0, 0, 0, 80],
@@ -349,7 +418,8 @@ export default function App() {
     elevationScale: 0,
     extruded: false,
     updateTriggers: {
-      getFillColor: viewMode,
+      getFillColor: [viewMode, gapMode],
+      data: [viewMode, gapMode],
     },
   })
 
@@ -361,6 +431,8 @@ export default function App() {
         onInfo={setActiveExplainer}
         viewMode={viewMode}
         onViewChange={setViewMode}
+        gapMode={gapMode}
+        onGapModeChange={setGapMode}
         onFly={flyTo}
       />
 
@@ -383,11 +455,11 @@ export default function App() {
         </DeckGL>
       </div>
 
-      <Legend viewMode={viewMode} />
+      <Legend viewMode={viewMode} gapMode={gapMode} />
 
       <TrendToggle trendMode={trendMode} onChange={setTrendMode} onInfo={setActiveExplainer} />
 
-      <ModeIndicator viewMode={viewMode} />
+      <ModeIndicator viewMode={viewMode} gapMode={gapMode} />
 
       {selectedTile && (
         <BioregionCard
@@ -396,6 +468,7 @@ export default function App() {
           onInfo={setActiveExplainer}
           trendMode={trendMode}
           viewMode={viewMode}
+          gapMode={gapMode}
         />
       )}
 
