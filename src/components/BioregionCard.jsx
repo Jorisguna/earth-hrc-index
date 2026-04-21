@@ -276,10 +276,12 @@ export default function BioregionCard({ tile, onClose, onInfo, trendMode, viewMo
             {fmt(tile.evaporative_fraction ?? (tile.hrc_score != null ? tile.hrc_score / 10 : null))}
           </span>
         </div>
-        {tile.date_start && (
+        {(tile.hrc_window_start || tile.date_start) && (
           <div className="card-row">
             <span className="card-key">Period</span>
-            <span className="card-val">{tile.date_start} – {tile.date_end}</span>
+            <span className="card-val">
+              {tile.hrc_window_start || tile.date_start} – {tile.hrc_window_end || tile.date_end}
+            </span>
           </div>
         )}
         <div className="card-row">
