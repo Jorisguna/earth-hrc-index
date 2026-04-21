@@ -12,14 +12,19 @@ It is scored from 0 to 10:
   • 10 means all available energy is being channelled into evaporation and transpiration — the surface is functioning as a living cooling system.
 
 How it is calculated:
-The score is the evaporative fraction multiplied by 10. The evaporative fraction is the ratio of latent heat flux (energy used by water evaporation and plant transpiration) to net radiation (total incoming solar energy).
+The score is the annual evaporative fraction multiplied by 10. The evaporative fraction is the ratio of total annual latent heat flux (energy used by water evaporation and plant transpiration) to total annual net radiation (total incoming solar energy).
 
-  HRC = (Latent heat flux ÷ Net radiation) × 10
+  HRC = (Σ Latent heat flux ÷ Σ Net radiation) × 10
+
+Annual totals are used rather than monthly averages — this matches the standard definition used by GLEAM, FLUXNET, and MODIS MOD16, and better captures seasonal patterns like summer droughts and winter dormancy.
+
+Scores are computed from 12 months of ERA5-Land satellite data (January 2025 – January 2026).
 
 Reference points:
   • ~6.5–6.8 — estimated pre-industrial global mean
   • ~5.8 — current global mean (land surfaces)
   • 6.5–8.0 — healthy forests and wetlands
+  • 8.5–10.0 — high-performing maritime and Atlantic forests (e.g. Wales)
   • 1.0–2.5 — degraded or paved urban surfaces`,
   },
 
