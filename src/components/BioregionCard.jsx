@@ -36,15 +36,6 @@ function getGapContext(tile, gapMode) {
       explainerKey: 'historicalBaseline',
     }
   }
-  if (gapMode === 'ceiling') {
-    return {
-      gap:          tile.restoration_gap_ceiling,
-      reference:    tile.hrc_ceiling_reference,
-      refLabel:     'PM physical ceiling',
-      gapNote:      'This is the full physical cooling potential the local climate allows.',
-      explainerKey: 'pmCeiling',
-    }
-  }
   // intact (default)
   const gap = tile.restoration_gap
   return {
@@ -243,24 +234,6 @@ export default function BioregionCard({ tile, onClose, onInfo, trendMode, viewMo
             }}>
               {(hrc - tile.hrc_historical_reference) >= 0 ? '+' : ''}
               {fmt(hrc - tile.hrc_historical_reference)}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {tile.hrc_ceiling_reference != null && (
-        <div className="card-section">
-          <div className="card-row">
-            <span className="card-key">
-              PM ceiling
-              <InfoBtn onClick={() => onInfo('pmCeiling')} />
-            </span>
-            <span className="card-val">{fmt(tile.hrc_ceiling_reference)} / 10</span>
-          </div>
-          <div className="card-row">
-            <span className="card-key">Gap to ceiling</span>
-            <span className="card-val restoration-gap">
-              +{fmt(tile.restoration_gap_ceiling ?? Math.max(tile.hrc_ceiling_reference - hrc, 0))}
             </span>
           </div>
         </div>

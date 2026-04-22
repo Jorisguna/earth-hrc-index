@@ -34,20 +34,17 @@ const REGIONS = [
 // Maps gapMode to the DB column name used for restoration gap
 function getGapField(gapMode) {
   if (gapMode === 'historical') return 'restoration_gap_historical'
-  if (gapMode === 'ceiling')    return 'restoration_gap_ceiling'
   return 'restoration_gap'
 }
 
 const GAP_MODE_LABELS = {
   intact:     'Intact site',
   historical: 'Historical',
-  ceiling:    'PM Ceiling',
 }
 
 const GAP_MODE_DESCRIPTIONS = {
   intact:     'vs. best current intact sites in this ecoregion',
   historical: 'vs. this region\'s mean cooling in 2001–2010',
-  ceiling:    'vs. theoretical Penman-Monteith physical maximum',
 }
 
 function InfoBtn({ onClick }) {
@@ -91,13 +88,6 @@ function GapModeToggle({ gapMode, onChange, onInfo }) {
           onClick={() => onChange('historical')}
         >
           Historical
-        </button>
-        <button
-          className={`gap-mode-btn ${gapMode === 'ceiling' ? 'active' : ''}`}
-          onClick={() => onChange('ceiling')}
-        >
-          PM Ceiling
-          <InfoBtn onClick={(e) => { e.stopPropagation(); onInfo('pmCeiling') }} />
         </button>
       </div>
     </div>
