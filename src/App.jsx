@@ -94,34 +94,6 @@ function GapModeToggle({ gapMode, onChange, onInfo }) {
   )
 }
 
-function TrendToggle({ trendMode, onChange, onInfo }) {
-  return (
-    <div className="trend-toggle">
-      <span className="trend-toggle-label">Trend window</span>
-      <div className="trend-toggle-btns">
-        <div className="trend-toggle-option">
-          <button
-            className={`trend-toggle-btn ${trendMode === '24m' ? 'active' : ''}`}
-            onClick={() => onChange('24m')}
-          >
-            24-month
-          </button>
-          <InfoBtn onClick={() => onInfo('trend24m')} />
-        </div>
-        <div className="trend-toggle-option">
-          <button
-            className={`trend-toggle-btn ${trendMode === '60m' ? 'active' : ''}`}
-            onClick={() => onChange('60m')}
-          >
-            60-month
-          </button>
-          <InfoBtn onClick={() => onInfo('trend60m')} />
-        </div>
-      </div>
-    </div>
-  )
-}
-
 function ModeIndicator({ viewMode, gapMode }) {
   if (viewMode === 'absolute') {
     return (
@@ -306,8 +278,7 @@ export default function App() {
   const [selectedTile, setSelectedTile] = useState(null)
   const [viewState, setViewState] = useState(INITIAL_VIEW_STATE)
   const [activeExplainer, setActiveExplainer] = useState(null)
-  const [trendMode, setTrendMode] = useState('60m')
-  const [viewMode, setViewMode] = useState('absolute')
+  const [viewMode, setViewMode] = useState('relative')
   const [gapMode, setGapMode] = useState('intact')
   const debounceTimer = useRef(null)
 
@@ -447,8 +418,6 @@ export default function App() {
 
       <Legend viewMode={viewMode} gapMode={gapMode} />
 
-      <TrendToggle trendMode={trendMode} onChange={setTrendMode} onInfo={setActiveExplainer} />
-
       <ModeIndicator viewMode={viewMode} gapMode={gapMode} />
 
       {selectedTile && (
@@ -456,7 +425,6 @@ export default function App() {
           tile={selectedTile}
           onClose={() => setSelectedTile(null)}
           onInfo={setActiveExplainer}
-          trendMode={trendMode}
           viewMode={viewMode}
           gapMode={gapMode}
         />

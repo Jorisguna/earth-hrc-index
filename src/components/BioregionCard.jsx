@@ -47,13 +47,13 @@ function getGapContext(tile, gapMode) {
   }
 }
 
-export default function BioregionCard({ tile, onClose, onInfo, trendMode, viewMode, gapMode }) {
+export default function BioregionCard({ tile, onClose, onInfo, viewMode, gapMode }) {
   if (!tile) return null
 
   const hrc = tile.hrc_score
   const label = hrcLabel(hrc)
-  const trendScore = trendMode === '60m' ? tile.trend_score_60m : tile.trend_score
-  const trendLabel = trendMode === '60m' ? 'Trend (60-month)' : 'Trend (24-month)'
+  const trendScore = tile.trend_score_60m
+  const trendLabel = 'Trend (60-month)'
 
   // ── Gap view — restoration gap leads ────────────────────────
   if (viewMode === 'relative') {
@@ -104,7 +104,7 @@ export default function BioregionCard({ tile, onClose, onInfo, trendMode, viewMo
           <div className="card-row">
             <span className="card-key">
               {trendLabel}
-              <InfoBtn onClick={() => onInfo(trendMode === '60m' ? 'trend60m' : 'trend24m')} />
+              <InfoBtn onClick={() => onInfo('trend60m')} />
             </span>
             <span className="card-val"><TrendArrow score={trendScore} /></span>
           </div>
