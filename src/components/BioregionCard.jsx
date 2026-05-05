@@ -28,11 +28,14 @@ function TrendArrow({ score }) {
 function getGapContext(tile, gapMode) {
   const hrc = tile.hrc_score
   if (gapMode === 'historical') {
+    const isRecovered = tile.historical_change != null && tile.historical_change > 0.2
     return {
       gap:          tile.restoration_gap_historical,
       reference:    tile.hrc_historical_reference,
       refLabel:     '2001–2010 baseline',
-      gapNote:      'This location has lost this many HRC points since its 2001–2010 mean.',
+      gapNote:      isRecovered
+        ? `This location has improved by ${fmt(tile.historical_change)} HRC points since its 2001–2010 baseline — its restoration gap is zero.`
+        : 'This location has lost this many HRC points since its 2001–2010 mean.',
       explainerKey: 'historicalBaseline',
     }
   }
@@ -219,23 +222,30 @@ export default function BioregionCard({ tile, onClose, onInfo, viewMode, gapMode
         <div className="card-section">
           <div className="card-row">
             <span className="card-key">
-              Historical baseline
+              Historical baseline (2001–2010)
               <InfoBtn onClick={() => onInfo('historicalBaseline')} />
             </span>
             <span className="card-val">{fmt(tile.hrc_historical_reference)} / 10</span>
           </div>
-          <div className="card-row">
-            <span className="card-key">
-              Change since 2001–10
-              <InfoBtn onClick={() => onInfo('historicalBaseline')} />
-            </span>
-            <span className="card-val" style={{
-              color: (hrc - tile.hrc_historical_reference) >= 0 ? '#1D9E75' : '#E67E22'
-            }}>
-              {(hrc - tile.hrc_historical_reference) >= 0 ? '+' : ''}
-              {fmt(hrc - tile.hrc_historical_reference)}
-            </span>
-          </div>
+          {tile.historical_change != null && (
+            <div className="card-row">
+              <span className="card-key">
+                Change since 2001–10
+                <InfoBtn onClick={() => onInfo('historicalBaseline')} />
+              </span>
+              <span className="card-val" style={{
+                color: tile.historical_change > 0.2  ? '#1D9E75'   // recovery
+                     : tile.historical_change < -0.2 ? '#E67E22'   // degradation
+                     : '#999'                                       // stable
+              }}>
+                {tile.historical_change > 0.2
+                  ? `+${fmt(tile.historical_change)}`
+                  : tile.historical_change < -0.2
+                  ? `−${fmt(Math.abs(tile.historical_change))}`
+                  : '±0.0'}
+              </span>
+            </div>
+          )}
         </div>
       )}
 

@@ -211,26 +211,31 @@ The reference is recalculated as new data enters the system. It is not fixed —
   },
 
   historicalBaseline: {
-    title: 'Historical Baseline — 2001–2010 Spring Mean',
-    body: `The historical baseline is the mean spring (March–May) HRC score for this tile over the decade 2001–2010, computed from the same ERA5 reanalysis dataset used for current scores.
+    title: 'Historical Baseline — 2001–2010 Mean',
+    body: `The historical baseline shows what this exact location was achieving in the early 2000s, before the period of most rapid land use change. Comparing today's score to its baseline tells you how much heat regulation capacity has been lost — or recovered — at this specific tile.
 
 How it is calculated:
-For each year from 2001 to 2010, the March, April, and May monthly HRC values are computed using the standard evaporative fraction formula. The mean of all 30 monthly values (10 years × 3 months) gives the baseline.
+For each tile, the system computes the HRC score for every year from 2001 to 2010, then takes the average of those ten annual scores.
 
-  HRC = (Latent heat flux ÷ Net radiation) × 10
-  Baseline = mean of March–May HRC values, 2001–2010
+  HRC_annual_y = 10 × Σ |Latent heat flux| ÷ Σ (Net solar + Net thermal radiation)
+  Historical baseline = mean of HRC_annual values, 2001–2010
 
-Why spring?
-Spring (March–May) is the season when vegetation activity is ramping up and evapotranspiration is most sensitive to land condition changes. It is the window that most clearly distinguishes degraded land from recovering or intact land in temperate climates like Wales.
+The yearly calculation uses the same formula and the same dataset as the current score: latent heat flux divided by net radiation, summed across all twelve months, taken from the ECMWF ERA5-Land monthly reanalysis. This means the historical baseline and the current score are directly comparable — you can subtract one from the other and the difference means what it appears to mean.
 
-Change since baseline:
-  • A negative value (orange) means this tile is cooling less effectively than it was in 2001–2010 — a signal of land degradation, vegetation loss, or drying.
-  • A positive value (green) means this tile has improved its cooling capacity since the baseline period — a signal of recovery, afforestation, or improved land management.
-  • Near zero means the land is in roughly the same condition as the early 2000s.
+How to read the numbers:
+The "Change since 2001–10" value is the simplest reading.
+  • A positive number with a green indicator means the tile has gained cooling capacity since the baseline — a real recovery signal worth attending to.
+  • A negative number with a red indicator means the tile has lost cooling capacity.
+  • A value near zero means it is holding steady — for desert tiles this is the expected result, because deserts are physically stable on a 20-year horizon.
 
-Data source: ECMWF ERA5-Land daily aggregates (Tier C reanalysis). The baseline uses identical methodology to current scores so comparisons are internally consistent.
+The restoration gap (in gap view) is a related but different number. It only counts losses; tiles that have recovered to or above their baseline appear with a zero gap. This is intentional — the gap is designed for restoration targeting, where the question is "how much capacity could be recovered here", not "how is this tile trending".
 
-Note: The historical baseline is currently available for Wales and the San Francisco Bay Area.`,
+Coverage: The historical baseline is currently computed for Wales, San Francisco Bay, and Los Angeles.
+
+Limitations:
+ERA5 is built from a model that ingests satellite and ground observations. Fewer satellites were assimilated in the early 2000s than today, so the historical baseline carries slightly more uncertainty than the current score. The direction of change is reliable; the magnitude should be read with appropriate care, particularly in regions flagged with medium-low confidence.
+
+Methodology version: v2.1 (full annual cycle, ratio-of-annual-sums per year, mean across 10 years). Supersedes the v2.0 prototype which used a spring-only window with a different formula.`,
   },
 
   pmCeiling: {

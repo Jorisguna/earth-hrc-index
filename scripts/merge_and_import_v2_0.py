@@ -157,26 +157,44 @@ def process_region(tiles_path, ref_path, slug):
         if hrc_score is not None and hrc_reference is not None:
             restoration_gap = round(max(hrc_reference - hrc_score, 0.0), 4)
 
+        # NOTE — Auxiliary columns (historical, ceiling, trend) are stubbed as None.
+        # This script INSERTS new rows; tile-recompute workflows DELETE existing
+        # rows first. So any historical/ceiling/trend data must be re-applied
+        # separately after this import, via the dedicated v2.1 historical pipeline,
+        # ceiling SQL files, and trend SQL files. The stubs below ensure the
+        # INSERT does not error if those columns become NOT NULL in future.
         insert_data = {
-            'longitude':            lon,
-            'latitude':             lat,
-            'hrc_score':            round(hrc_score, 4) if hrc_score is not None else None,
-            'ecoregion_name':       eco_name,
-            'biome_name':           row.get('biome_name') or None,
-            'methodology_version':  'v2.0',
-            'hrc_formula':          row.get('hrc_formula') or 'ratio_of_annual_sums_v2.0',
-            'computation_window':   row.get('computation_window') or '2025-01-01/2026-01-01',
-            'hrc_window_start':     '2025-01-01',
-            'hrc_window_end':       '2026-01-01',
-            'confidence_tier':      row.get('confidence_tier') or 'C',
-            'batch_id':             '2026-Q2-v2',
-            'hrc_reference':        hrc_reference,
-            'hrc_reference_p75':    ref['hrc_reference_p75']    if ref else None,
-            'hrc_reference_p95':    ref['hrc_reference_p95']    if ref else None,
-            'pa_centroid_count':    ref['pa_centroid_count']    if ref else None,
-            'reference_filter':     ref['reference_filter']     if ref else None,
-            'reference_confidence': ref['reference_confidence'] if ref else None,
-            'restoration_gap':      restoration_gap,
+            'longitude':                  lon,
+            'latitude':                   lat,
+            'hrc_score':                  round(hrc_score, 4) if hrc_score is not None else None,
+            'ecoregion_name':             eco_name,
+            'biome_name':                 row.get('biome_name') or None,
+            'methodology_version':        'v2.0',
+            'hrc_formula':                row.get('hrc_formula') or 'ratio_of_annual_sums_v2.0',
+            'computation_window':         row.get('computation_window') or '2025-01-01/2026-01-01',
+            'hrc_window_start':           '2025-01-01',
+            'hrc_window_end':             '2026-01-01',
+            'confidence_tier':            row.get('confidence_tier') or 'C',
+            'batch_id':                   '2026-Q2-v2',
+            'hrc_reference':              hrc_reference,
+            'hrc_reference_p75':          ref['hrc_reference_p75']    if ref else None,
+            'hrc_reference_p95':          ref['hrc_reference_p95']    if ref else None,
+            'pa_centroid_count':          ref['pa_centroid_count']    if ref else None,
+            'reference_filter':           ref['reference_filter']     if ref else None,
+            'reference_confidence':       ref['reference_confidence'] if ref else None,
+            'restoration_gap':            restoration_gap,
+            # Historical baseline — re-applied via v2.1 historical pipeline
+            'hrc_historical_reference':   None,
+            'historical_change':          None,
+            'restoration_gap_historical': None,
+            'historical_confidence':      None,
+            'historical_method_version':  None,
+            'historical_window':          None,
+            # Ceiling — re-applied via wales/sfbay/la_ceiling_update.sql
+            'hrc_ceiling_reference':      None,
+            'restoration_gap_ceiling':    None,
+            # Trend — re-applied via wales/la/sfbay trend update SQL files
+            'trend_score_60m':            None,
         }
 
         result = (

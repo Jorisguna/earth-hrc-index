@@ -1,115 +1,105 @@
-// ============================================================
-// 10_hrc_historical_wales.js
-// Earth HRC Index — Historical baseline for Wales (Script A)
+// =====================================================================
+// 10_hrc_historical_wales.js — v2.1
+// Heat Regulation Capacity Historical Baseline — Wales
 //
-// Computes the spring (March–May) mean HRC per tile for the
-// historical period 2001–2010, matching the seasonal window
-// used for current HRC scores (mean of final 3 months = spring).
+// SUPERSEDES the v2.0 prototype implementation (deprecated).
+// Methodology aligned with the v2.0 current HRC score so the baseline
+// and the current score are directly comparable.
 //
-// Output per tile: longitude, latitude, hrc_historical
-//   → load into hrc_historical_reference column in Supabase
-//   → restoration_gap_historical = hrc_historical - current hrc_score
-//     (positive = historically better, i.e. degradation has occurred)
+// CHANGES vs v2.0 prototype:
+//   - Dataset:  ERA5_LAND/DAILY_AGGR  →  ERA5_LAND/MONTHLY_AGGR
+//   - Formula:  mean of monthly ratios → ratio of annual sums per year,
+//                                        then mean across 10 years
+//   - Window:   spring (Mar–May) only → full annual cycle (Jan–Dec)
 //
-// Period: 2001–2010, March–May only (30 months)
-// Dataset: ECMWF/ERA5_LAND/DAILY_AGGR (Tier C)
-// Region: Wales
-// ============================================================
+// METHODOLOGY (per docs/historical_v2_1_methodology.md):
+//   For each year y in 2001–2010:
+//     HRC_annual_y = 10 × Σ|λE_y,m| / Σ(R_solar_y,m + R_thermal_y,m)
+//   HRC_historical_reference = mean of the 10 annual values.
+//
+// Sampling: native ERA5-Land grid (scale 11132), lat/lon emitted at
+//   EPSG:4326 for 5dp matching against the live hrc_tiles table.
+// =====================================================================
 
-var region = ee.Geometry.Rectangle([-5.4, 51.3, -2.6, 53.5]);
+var region     = ee.Geometry.Rectangle([-5.35, 51.35, -2.65, 53.45]);
+var regionName = 'wales';
+var years      = ee.List.sequence(2001, 2010);
+
 Map.centerObject(region, 8);
 
-var ERA5 = 'ECMWF/ERA5_LAND/DAILY_AGGR';
+// ── Per-year HRC: identical formula to v2.0 current score ────────────
+var computeAnnualHRC = function(year) {
+  year = ee.Number(year);
+  var startDate = ee.Date.fromYMD(year, 1, 1);
+  var endDate   = ee.Date.fromYMD(year.add(1), 1, 1);
 
-// ── Step 1: Build monthly HRC for March–May of each year 2001–2010 ──
-// That's 10 years × 3 months = 30 months total.
-var years  = ee.List.sequence(2001, 2010);
-var months = ee.List([3, 4, 5]);  // March, April, May
+  var era5 = ee.ImageCollection('ECMWF/ERA5_LAND/MONTHLY_AGGR')
+    .filterDate(startDate, endDate)
+    .filterBounds(region);
 
-var springImages = ee.ImageCollection.fromImages(
-  years.map(function(yr) {
-    return months.map(function(mo) {
-      yr = ee.Number(yr);
-      mo = ee.Number(mo);
-      var start = ee.Date.fromYMD(yr, mo, 1);
-      var end   = start.advance(1, 'month');
+  var latentHeat = era5.select('surface_latent_heat_flux_sum')
+                       .map(function(img) { return img.abs(); })
+                       .sum().clip(region);
 
-      var era5 = ee.ImageCollection(ERA5)
-        .filterDate(start, end)
-        .filterBounds(region)
-        .mean();
+  var solarRad   = era5.select('surface_net_solar_radiation_sum').sum().clip(region);
+  var thermalRad = era5.select('surface_net_thermal_radiation_sum').sum().clip(region);
 
-      // True net radiation = net solar + net thermal.
-      // surface_net_thermal_radiation_sum is negative (net outgoing longwave),
-      // so adding it (NOT abs-ing it) gives the physically correct Rn.
-      // The original Wales tiles used this formula; taking abs of thermal
-      // inflates the denominator and halves EF.
-      var latentHeat = era5.select('surface_latent_heat_flux_sum').abs();
-      var netRad     = era5.select('surface_net_solar_radiation_sum')
-                        .add(era5.select('surface_net_thermal_radiation_sum'));
-      var netRadSafe = netRad.where(netRad.lte(0), 0.001);
-      var ef         = latentHeat.divide(netRadSafe).min(1).max(0);
-      var hrc        = ef.multiply(10).rename('hrc_historical').toFloat();
+  // CRITICAL: thermal radiation is NEGATIVE — never .abs() it
+  var netRad     = solarRad.add(thermalRad);
+  var netRadSafe = netRad.where(netRad.lte(0), 0.001);
 
-      return hrc
-        .clip(region)
-        .set('system:time_start', start.millis())
-        .set('year', yr)
-        .set('month', mo);
-    });
-  }).flatten()
-);
+  return latentHeat.divide(netRadSafe).min(1).max(0)
+                   .multiply(10).rename('HRC_annual')
+                   .set('year', year)
+                   .clip(region);
+};
 
-print('Spring HRC image count (should be 30):', springImages.size());
+// ── 10-year mean ─────────────────────────────────────────────────────
+var annualHRCs = ee.ImageCollection.fromImages(years.map(computeAnnualHRC));
 
-// ── Step 2: Mean historical spring HRC per pixel ──────────────
-var historicalHRC = springImages.mean().rename('hrc_historical');
+var historicalBaseline = annualHRCs.mean()
+  .rename('hrc_historical_reference')
+  .toFloat()
+  .clip(region);
 
-// ── Step 3: Diagnostics ───────────────────────────────────────
-print('Historical spring HRC range (expect ~5–8 for Wales):',
-  historicalHRC.reduceRegion({
+print('Historical baseline range (Wales — expect mean ~7.0–7.8):',
+  historicalBaseline.reduceRegion({
     reducer: ee.Reducer.minMax().combine(ee.Reducer.mean(), '', true),
-    geometry: region,
-    scale: 11132,
-    maxPixels: 1e8
+    geometry: region, scale: 11132, maxPixels: 1e8
   })
 );
 
-// ── Step 4: Sample to grid points (same scale as main scripts) ─
-var samplePoints = historicalHRC.sample({
+// ── Sample on native ERA5-Land grid, emit lat/lon for 5dp matching ───
+var historicalFC = historicalBaseline.sample({
   region:     region,
   scale:      11132,
+  projection: 'EPSG:4326',
   geometries: true,
-  seed:       42
-});
-
-samplePoints = samplePoints.map(function(f) {
+  tileScale:  4
+}).map(function(f) {
   var coords = f.geometry().coordinates();
-  return f
-    .set('longitude', coords.get(0))
-    .set('latitude',  coords.get(1));
+  return f.set({
+    longitude: ee.Number(coords.get(0)),
+    latitude:  ee.Number(coords.get(1))
+  });
 });
 
-print('Sample point count:', samplePoints.size());
+print('Sample point count (Wales — expect ~320):', historicalFC.size());
 
-// ── Step 5: Map preview ───────────────────────────────────────
-Map.addLayer(
-  historicalHRC.clip(region),
-  { min: 2, max: 9, palette: ['8B2500', 'D4550A', 'F4A623', 'C8D84A', '1D9E75'] },
-  'Historical Spring HRC (2001–2010, Mar–May)'
+// ── Map preview ──────────────────────────────────────────────────────
+Map.addLayer(historicalBaseline,
+  { min: 0, max: 10, palette: ['8B2500','D4550A','F4A623','C8D84A','1D9E75'] },
+  'HRC historical 2001–2010 (' + regionName + ')'
 );
 
-// ── Step 6: Export ────────────────────────────────────────────
+// ── Export ───────────────────────────────────────────────────────────
 Export.table.toDrive({
-  collection:     samplePoints,
-  description:    'HRC_Historical_Wales',
+  collection:     historicalFC,
+  description:    'hrc_historical_v2_1_' + regionName,
   folder:         'EarthHRC',
-  fileNamePrefix: 'HRC_Historical_Wales',
+  fileNamePrefix: 'hrc_historical_v2_1_' + regionName,
   fileFormat:     'CSV',
-  selectors:      ['longitude', 'latitude', 'hrc_historical']
+  selectors:      ['longitude', 'latitude', 'hrc_historical_reference']
 });
 
-print('Export task queued — go to Tasks panel and click RUN.');
-print('');
-print('After export, use the SQL below to load into Supabase:');
-print('See scripts/update_historical_wales.sql for the UPDATE template.');
+print('Export task queued. Go to Tasks panel and click RUN.');

@@ -1,26 +1,31 @@
 // =====================================================================
-// 12_hrc_historical_sfbay.js — v2.1
-// Heat Regulation Capacity Historical Baseline — San Francisco Bay
+// 13_hrc_historical_la.js — v2.1
+// Heat Regulation Capacity Historical Baseline — Los Angeles
 //
-// SUPERSEDES the v2.0 prototype implementation (deprecated).
-// Methodology aligned with the v2.0 current HRC score so the baseline
-// and the current score are directly comparable.
+// FIRST IMPLEMENTATION for LA. The v2.0 pilot deliberately skipped LA
+// historical to avoid encoding the deprecated v2.0 prototype methodology
+// into a third region. This script is born v2.1 — methodology aligned
+// with the v2.0 current HRC score from day one.
 //
-// CHANGES vs v2.0 prototype:
-//   - Dataset:  ERA5_LAND/DAILY_AGGR  →  ERA5_LAND/MONTHLY_AGGR
-//   - Formula:  mean of monthly ratios → ratio of annual sums per year,
-//                                        then mean across 10 years
-//   - Window:   spring (Mar–May) only → full annual cycle (Jan–Dec)
+// METHODOLOGY (per docs/historical_v2_1_methodology.md):
+//   For each year y in 2001–2010:
+//     HRC_annual_y = 10 × Σ|λE_y,m| / Σ(R_solar_y,m + R_thermal_y,m)
+//   HRC_historical_reference = mean of the 10 annual values.
 //
-// Bounding box matches the v2.0 SF Bay tile import for full coverage:
-//   [-123.0, 37.0, -121.2, 38.6]
+// Bounding box matches the v2.0 LA tile import:
+//   [-119.0, 33.6, -117.4, 34.4]
 //
 // Sampling: native ERA5-Land grid (scale 11132), lat/lon emitted at
 //   EPSG:4326 for 5dp matching against the live hrc_tiles table.
+//
+// Notes on LA confidence:
+//   The Mojave Desert subset of this region has fewer ERA5 ground stations
+//   than coastal LA. Tiles are flagged historical_confidence='medium-low'
+//   in the import SQL to surface this in the user interface.
 // =====================================================================
 
-var region     = ee.Geometry.Rectangle([-123.0, 37.0, -121.2, 38.6]);
-var regionName = 'sfbay';
+var region     = ee.Geometry.Rectangle([-119.0, 33.6, -117.4, 34.4]);
+var regionName = 'la';
 var years      = ee.List.sequence(2001, 2010);
 
 Map.centerObject(region, 8);
@@ -60,7 +65,7 @@ var historicalBaseline = annualHRCs.mean()
   .toFloat()
   .clip(region);
 
-print('Historical baseline range (SF Bay — expect mean ~4.5–5.5):',
+print('Historical baseline range (LA — expect mean ~2.8–3.5):',
   historicalBaseline.reduceRegion({
     reducer: ee.Reducer.minMax().combine(ee.Reducer.mean(), '', true),
     geometry: region, scale: 11132, maxPixels: 1e8
@@ -82,7 +87,7 @@ var historicalFC = historicalBaseline.sample({
   });
 });
 
-print('Sample point count (SF Bay — expect ~221):', historicalFC.size());
+print('Sample point count (LA — expect ~98):', historicalFC.size());
 
 // ── Map preview ──────────────────────────────────────────────────────
 Map.addLayer(historicalBaseline,
