@@ -308,11 +308,18 @@ export default function App() {
       console.error('Supabase fetch error:', error)
       setError('Could not load tile data. Please check your .env file.')
     } else {
-      // Snap each tile to its H3 cell (res 5 ≈ 9.8km edge, matching ERA5 scale).
-      // Deduplicate so no two tiles share the same hex — first one wins.
+      // Snap each tile to its H3 cell at the resolution matching its data source:
+      //   - 9000m (ERA5-Land Tier C) → H3 res 5 (~9.8km edge)
+      //   - 500m  (PML_V2 v2.1)      → H3 res 8 (~530m edge)
+      //   - 70m   (ECOSTRESS, future) → H3 res 10 (~75m edge)
+      // Deduplicate by h3Index — H3 indices are unique per resolution, so
+      // tiles at different tiers don't collide.
       const seen = new Set()
       const hexTiles = (data || []).reduce((acc, t) => {
-        const h3Index = latLngToCell(t.latitude, t.longitude, 5)
+        const h3Res = t.data_resolution_m === 500 ? 8
+                    : t.data_resolution_m === 70  ? 10
+                    : 5
+        const h3Index = latLngToCell(t.latitude, t.longitude, h3Res)
         if (!seen.has(h3Index)) {
           seen.add(h3Index)
           acc.push({ ...t, h3Index })
