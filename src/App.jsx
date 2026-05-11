@@ -29,6 +29,9 @@ const REGIONS = [
   { label: 'Wales',       longitude: -3.8,    latitude: 52.4,  zoom: 8  },
   { label: 'Los Angeles', longitude: -118.25, latitude: 34.05, zoom: 9  },
   { label: 'SF Bay',      longitude: -122.1,  latitude: 37.7,  zoom: 9  },
+  // v2.1.1 higher-fidelity showcase regions — zoom 10 to land in the 500 m tier
+  { label: 'Île-de-France', longitude: 2.8,    latitude: 48.5,  zoom: 10 },
+  { label: 'Tapajós',       longitude: -54.95, latitude: -2.85, zoom: 10 },
 ]
 
 // Maps gapMode to the DB column name used for restoration gap
@@ -225,7 +228,7 @@ function HeadlineBar({ tiles, loading, onInfo, viewMode, onViewChange, gapMode, 
   )
 }
 
-function Legend({ viewMode, gapMode }) {
+function Legend({ viewMode, gapMode, resolutionLabel }) {
   if (viewMode === 'relative') {
     const title = `Restoration Gap — ${GAP_MODE_LABELS[gapMode]}`
     const stops = [
@@ -246,6 +249,9 @@ function Legend({ viewMode, gapMode }) {
           </div>
         ))}
         <div className="legend-subtitle">{GAP_MODE_DESCRIPTIONS[gapMode]}</div>
+        {resolutionLabel && (
+          <div className="legend-subtitle">{resolutionLabel}</div>
+        )}
       </div>
     )
   }
@@ -267,6 +273,9 @@ function Legend({ viewMode, gapMode }) {
           <span className="legend-text">{s.text}</span>
         </div>
       ))}
+      {resolutionLabel && (
+        <div className="legend-subtitle">{resolutionLabel}</div>
+      )}
     </div>
   )
 }
@@ -287,6 +296,14 @@ export default function App() {
   // Requires a composite index on (latitude, longitude) in Supabase for
   // good performance at scale:
   //   CREATE INDEX IF NOT EXISTS hrc_tiles_lat_lon ON hrc_tiles (latitude, longitude);
+  //
+  // Zoom-aware tier selection (v2.1.1):
+  //   - At zoom < 9 (regional / global view): query only 9km Tier C tiles
+  //     by filtering data_resolution_m = 9000. Prevents the panic-fetch
+  //     of 46k v2.1.1 tiles when a user is zoomed out.
+  //   - At zoom ≥ 9 (neighbourhood view): query the hrc_tiles_default
+  //     view, which returns the highest-resolution tier available per
+  //     region (500m for IDF/Tapajos, 9km for Wales/LA/SFBay).
   const fetchTilesForViewport = useCallback(async (vs) => {
     const viewport = new WebMercatorViewport({
       ...vs,
@@ -296,13 +313,20 @@ export default function App() {
     const [minLon, minLat, maxLon, maxLat] = viewport.getBounds()
 
     setLoading(true)
-    const { data, error } = await supabase
-      .from('hrc_tiles')
+    const useHighResLayer = vs.zoom >= 9
+    let query = supabase
+      .from(useHighResLayer ? 'hrc_tiles_default' : 'hrc_tiles')
       .select('*')
       .gte('latitude', minLat)
       .lte('latitude', maxLat)
       .gte('longitude', minLon)
       .lte('longitude', maxLon)
+    if (!useHighResLayer) {
+      // At low zoom, explicitly request only the 9km layer to avoid
+      // pulling ~46k 500m tiles for IDF/Tapajos.
+      query = query.eq('data_resolution_m', 9000)
+    }
+    const { data, error } = await query
 
     if (error) {
       console.error('Supabase fetch error:', error)
@@ -423,7 +447,17 @@ export default function App() {
         </DeckGL>
       </div>
 
-      <Legend viewMode={viewMode} gapMode={gapMode} />
+      <Legend
+        viewMode={viewMode}
+        gapMode={gapMode}
+        resolutionLabel={
+          tiles.some(t => t.data_resolution_m === 500)
+            ? '500 m neighbourhood view'
+            : tiles.length > 0
+            ? '9 km regional view'
+            : null
+        }
+      />
 
       <ModeIndicator viewMode={viewMode} gapMode={gapMode} />
 

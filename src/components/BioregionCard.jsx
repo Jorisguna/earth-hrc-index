@@ -11,6 +11,28 @@ function InfoBtn({ onClick }) {
   )
 }
 
+// v2.1.1 plain-language labels for technical fields.
+function resolutionLabel(m) {
+  if (m === 9000) return '9 km regional view'
+  if (m === 500)  return '500 m neighbourhood view'
+  if (m === 70)   return '70 m parcel view'
+  return null
+}
+
+function sourceLabel(src) {
+  if (src === 'ERA5_LAND_9km') return 'Tier C reanalysis (regional)'
+  if (src === 'PML_V2_500m')   return 'Higher fidelity (showcase)'
+  return null
+}
+
+function referenceMethodLabel(method) {
+  if (!method) return null
+  if (method.startsWith('centroid_p90_IUCN')) return 'Compared to local protected areas'
+  if (method === 'image_mask_p90_Hansen')     return 'Compared to local intact forest'
+  if (method === 'flux_tower_published')      return 'Compared to nearest flux tower measurement'
+  return null
+}
+
 function TrendArrow({ score }) {
   if (score === null || score === undefined) return <span style={{ color: '#999' }}>— unknown</span>
   const color = trendColor(score)
@@ -118,6 +140,30 @@ export default function BioregionCard({ tile, onClose, onInfo, viewMode, gapMode
             </span>
             <span className="card-val"><span className="tier-badge">{tile.confidence_tier || 'C'}</span></span>
           </div>
+          {resolutionLabel(tile.data_resolution_m) && (
+            <div className="card-row">
+              <span className="card-key">View</span>
+              <span className="card-val">{resolutionLabel(tile.data_resolution_m)}</span>
+            </div>
+          )}
+          {sourceLabel(tile.data_source) && (
+            <div className="card-row">
+              <span className="card-key">Data source</span>
+              <span className="card-val">{sourceLabel(tile.data_source)}</span>
+            </div>
+          )}
+          {tile.hrc_raw_ratio != null && tile.hrc_raw_ratio > 10 && (
+            <div className="card-row">
+              <span className="card-key" style={{ color: '#E67E22' }}>⚠ Note</span>
+              <span className="card-val" style={{ color: '#E67E22' }}>Computed at energy-balance limit</span>
+            </div>
+          )}
+          {referenceMethodLabel(tile.reference_method) && (
+            <div className="card-row">
+              <span className="card-key">Reference</span>
+              <span className="card-val">{referenceMethodLabel(tile.reference_method)}</span>
+            </div>
+          )}
         </div>
 
         {tile.ecoregion_name && (
@@ -169,7 +215,7 @@ export default function BioregionCard({ tile, onClose, onInfo, viewMode, gapMode
         <div className="card-row">
           <span className="card-key">
             {trendLabel}
-            <InfoBtn onClick={() => onInfo(trendMode === '60m' ? 'trend60m' : 'trend24m')} />
+            <InfoBtn onClick={() => onInfo('trend60m')} />
           </span>
           <span className="card-val"><TrendArrow score={trendScore} /></span>
         </div>
@@ -180,6 +226,30 @@ export default function BioregionCard({ tile, onClose, onInfo, viewMode, gapMode
           </span>
           <span className="card-val"><span className="tier-badge">{tile.confidence_tier || 'C'}</span></span>
         </div>
+        {resolutionLabel(tile.data_resolution_m) && (
+          <div className="card-row">
+            <span className="card-key">View</span>
+            <span className="card-val">{resolutionLabel(tile.data_resolution_m)}</span>
+          </div>
+        )}
+        {sourceLabel(tile.data_source) && (
+          <div className="card-row">
+            <span className="card-key">Data source</span>
+            <span className="card-val">{sourceLabel(tile.data_source)}</span>
+          </div>
+        )}
+        {tile.hrc_raw_ratio != null && tile.hrc_raw_ratio > 10 && (
+          <div className="card-row">
+            <span className="card-key" style={{ color: '#E67E22' }}>⚠ Note</span>
+            <span className="card-val" style={{ color: '#E67E22' }}>Computed at energy-balance limit</span>
+          </div>
+        )}
+        {referenceMethodLabel(tile.reference_method) && (
+          <div className="card-row">
+            <span className="card-key">Reference</span>
+            <span className="card-val">{referenceMethodLabel(tile.reference_method)}</span>
+          </div>
+        )}
       </div>
 
       {tile.ecoregion_name && (
