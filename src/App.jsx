@@ -314,19 +314,35 @@ export default function App() {
 
     setLoading(true)
     const useHighResLayer = vs.zoom >= 9
-    let query = supabase
-      .from(useHighResLayer ? 'hrc_tiles_default' : 'hrc_tiles')
-      .select('*')
-      .gte('latitude', minLat)
-      .lte('latitude', maxLat)
-      .gte('longitude', minLon)
-      .lte('longitude', maxLon)
-    if (!useHighResLayer) {
-      // At low zoom, explicitly request only the 9km layer to avoid
-      // pulling ~46k 500m tiles for IDF/Tapajos.
-      query = query.eq('data_resolution_m', 9000)
+
+    // Paginated fetch — Supabase REST defaults to a 1000-row cap per
+    // request, which truncates IDF/Tapajos viewports at 500m resolution.
+    // Loop with .range() until a partial page indicates we have them all.
+    const PAGE_SIZE = 1000
+    const MAX_PAGES = 20  // hard ceiling — 20k rows is more than any viewport
+    const all = []
+    let error = null
+    for (let page = 0; page < MAX_PAGES; page++) {
+      let q = supabase
+        .from(useHighResLayer ? 'hrc_tiles_default' : 'hrc_tiles')
+        .select('*')
+        .gte('latitude', minLat)
+        .lte('latitude', maxLat)
+        .gte('longitude', minLon)
+        .lte('longitude', maxLon)
+      if (!useHighResLayer) {
+        // At low zoom, explicitly request only the 9km layer to avoid
+        // pulling ~46k 500m tiles for IDF/Tapajos.
+        q = q.eq('data_resolution_m', 9000)
+      }
+      q = q.range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
+      const { data: pageData, error: pageError } = await q
+      if (pageError) { error = pageError; break }
+      if (!pageData || pageData.length === 0) break
+      all.push(...pageData)
+      if (pageData.length < PAGE_SIZE) break
     }
-    const { data, error } = await query
+    const data = all
 
     if (error) {
       console.error('Supabase fetch error:', error)
