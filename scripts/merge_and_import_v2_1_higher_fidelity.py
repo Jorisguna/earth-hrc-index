@@ -76,17 +76,18 @@ PATH_C_FALLBACK = {
 # ── Argument parsing ─────────────────────────────────────────────────
 if len(sys.argv) == 2 and os.path.isdir(sys.argv[1]):
     folder = os.path.expanduser(sys.argv[1])
-    # v2.1.1 has mixed export naming:
-    #   - Tiles use suffix convention:  hrc_v2_1_<region>_tiles_v2_1_1.csv
-    #   - References use inline:        hrc_v2_1_1_<region>_reference.csv
-    tile_files = sorted(glob.glob(os.path.join(folder, 'hrc_v2_1_*_tiles_v2_1_1.csv')))
+    # v2.1.2 export naming:
+    #   - Tiles use suffix convention:  hrc_v2_1_<region>_tiles_v2_1_2.csv
+    #   - References stay v2.1.1:       hrc_v2_1_1_<region>_reference.csv
+    #     (LST fix already applied in v2.1.1, references are content-stable.)
+    tile_files = sorted(glob.glob(os.path.join(folder, 'hrc_v2_1_*_tiles_v2_1_2.csv')))
     if not tile_files:
-        raise SystemExit(f'No hrc_v2_1_*_tiles_v2_1_1.csv files found in {folder}')
+        raise SystemExit(f'No hrc_v2_1_*_tiles_v2_1_2.csv files found in {folder}')
     pairs = []
     for tf in tile_files:
         basename = os.path.basename(tf)
-        # hrc_v2_1_idf_tiles_v2_1_1.csv → idf
-        slug = basename.replace('hrc_v2_1_', '').replace('_tiles_v2_1_1.csv', '')
+        # hrc_v2_1_idf_tiles_v2_1_2.csv → idf
+        slug = basename.replace('hrc_v2_1_', '').replace('_tiles_v2_1_2.csv', '')
         rf = os.path.join(folder, f'hrc_v2_1_1_{slug}_reference.csv')
         if not os.path.exists(rf):
             print(f'  [skip] No reference file for region "{slug}" (expected {rf})')
@@ -102,7 +103,7 @@ elif len(sys.argv) == 3:
         if not os.path.exists(p):
             raise SystemExit(f'File not found: {p}')
     basename = os.path.basename(tiles_path)
-    slug = basename.replace('hrc_v2_1_', '').replace('_tiles_v2_1_1.csv', '')
+    slug = basename.replace('hrc_v2_1_', '').replace('_tiles_v2_1_2.csv', '')
     pairs = [(tiles_path, ref_path, slug)]
 else:
     raise SystemExit(
@@ -207,6 +208,8 @@ def process_region(tiles_path, ref_path, slug):
 
         hrc_score    = parse_float(row.get('hrc_score') or row.get('HRC_score'))
         hrc_raw      = parse_float(row.get('hrc_raw_ratio'))
+        # v2.1.2 — absolute cooling-work magnitude (NULL on older CSVs)
+        lh_flux_wm2  = parse_float(row.get('latent_heat_flux_annual_wm2'))
         if hrc_score is not None and not (0 <= hrc_score <= 10):
             warnings.append(f'  Out-of-range hrc {hrc_score:.3f} at ({lon:.5f}, {lat:.5f})')
 
@@ -235,15 +238,17 @@ def process_region(tiles_path, ref_path, slug):
             'latitude':                   lat,
             'hrc_score':                  round(hrc_score, 4) if hrc_score is not None else None,
             'hrc_raw_ratio':              round(hrc_raw, 4) if hrc_raw is not None else None,
+            # v2.1.2 — absolute cooling-work magnitude (W/m², annual mean)
+            'latent_heat_flux_annual_wm2': round(lh_flux_wm2, 4) if lh_flux_wm2 is not None else None,
             'ecoregion_name':             eco_name,
             'biome_name':                 biome,
-            'methodology_version':        'v2.1.1_higher_fidelity',
-            'hrc_formula':                'pml_v2_500m_v2.1.1',
+            'methodology_version':        'v2.1.2_higher_fidelity',
+            'hrc_formula':                'pml_v2_500m_v2.1.2',
             'computation_window':         row.get('source_window') or '2023-01-01/2024-01-01',
             'hrc_window_start':           '2023-01-01',
             'hrc_window_end':             '2024-01-01',
             'confidence_tier':            'B',
-            'batch_id':                   '2026-Q2-v2.1.1-higher-fidelity',
+            'batch_id':                   '2026-Q2-v2.1.2-higher-fidelity',
             'region_code':                row.get('region_code') or slug,
             'data_source':                row.get('data_source') or 'PML_V2_500m',
             'data_resolution_m':          parse_int(row.get('data_resolution_m')) or 500,

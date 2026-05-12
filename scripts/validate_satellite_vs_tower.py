@@ -63,7 +63,7 @@ TOWERS = [
     },
 ]
 
-METHODOLOGY_VERSION = 'v2.1.1_higher_fidelity'
+METHODOLOGY_VERSION = 'v2.1.2_higher_fidelity'
 MATCH_RADIUS_DEG = 0.003  # ~333 m at the equator, half a 500 m hex
 
 
