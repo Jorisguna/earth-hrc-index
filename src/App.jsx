@@ -486,6 +486,10 @@ export default function App() {
   const overlayAlpha = mapStyle === 'satellite' ? 215 : 140
   const layer = new H3HexagonLayer({
     id: 'hrc-tiles',
+    // H3 hex grid sits on an icosahedron projection; without
+    // highPrecision adjacent hexes sometimes leave tiny gaps where
+    // icosahedral faces meet. Visible on satellite, hidden on dark.
+    highPrecision: true,
     // In gap view, exclude tiles with no value for the active gap reference.
     data: viewMode === 'relative'
       ? tiles.filter(t => t[gapField] != null)
