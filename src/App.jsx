@@ -327,11 +327,16 @@ function Legend({ viewMode, gapMode, resolutionLabel }) {
   }
 
   const stops = [
-    { label: '0–2',  color: '#8B2500', text: 'Severely degraded' },
-    { label: '2–4',  color: '#D4550A', text: 'Degraded' },
-    { label: '4–6',  color: '#F4A623', text: 'Moderate' },
-    { label: '6–8',  color: '#C8D84A', text: 'Healthy' },
-    { label: '8–10', color: '#1D9E75', text: 'High capacity' },
+    { label: '0–1',  color: '#8B2500', text: 'Severely degraded' },
+    { label: '1–2',  color: '#A03205' },
+    { label: '2–3',  color: '#B43C05' },
+    { label: '3–4',  color: '#D4550A' },
+    { label: '4–5',  color: '#E88219' },
+    { label: '5–6',  color: '#F4A623', text: 'Moderate' },
+    { label: '6–7',  color: '#DEBF36' },
+    { label: '7–8',  color: '#C8D84A' },
+    { label: '8–9',  color: '#73BB60' },
+    { label: '9–10', color: '#1D9E75', text: 'High capacity' },
   ]
   return (
     <div className="legend">

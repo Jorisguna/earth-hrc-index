@@ -1,12 +1,19 @@
-// Returns an [R, G, B] array for a given HRC score (0–10)
-// Palette from the HRC Index Technical Whitepaper v1.0
+// Returns an [R, G, B] array for a given HRC score (0–10).
+// 10-step ramp at 1.0 increments — finer differentiation than the
+// previous 5-step ramp so neighbouring tiles in the typical 2–9 range
+// render in visibly distinct shades.
 export function hrcColor(score) {
   if (score === null || score === undefined) return [100, 100, 100]
-  if (score < 2) return [139, 37, 0]    // deep red — severely degraded
-  if (score < 4) return [212, 85, 10]   // amber red
-  if (score < 6) return [244, 166, 35]  // amber
-  if (score < 8) return [200, 216, 74]  // yellow green
-  return [29, 158, 117]                 // teal — high capacity
+  if (score < 1)  return [139, 37, 0]    // #8B2500
+  if (score < 2)  return [160, 50, 5]    // #A03205
+  if (score < 3)  return [180, 60, 5]    // #B43C05
+  if (score < 4)  return [212, 85, 10]   // #D4550A
+  if (score < 5)  return [232, 130, 25]  // #E88219
+  if (score < 6)  return [244, 166, 35]  // #F4A623
+  if (score < 7)  return [222, 191, 54]  // #DEBF36
+  if (score < 8)  return [200, 216, 74]  // #C8D84A
+  if (score < 9)  return [115, 187, 96]  // #73BB60
+  return [29, 158, 117]                   // #1D9E75 — high capacity
 }
 
 // Returns a hex colour string for a trend score (–5 to +5)
