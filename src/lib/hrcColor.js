@@ -19,14 +19,25 @@ export function trendColor(score) {
   return '#1A7A4C'
 }
 
-// Returns an [R, G, B] array for a given restoration gap value (0 = at reference, higher = more degraded)
+// Returns an [R, G, B] array for a given restoration gap value
+// (0 = at reference, higher = more degraded).
+// 12-step ramp at 0.2 increments — finer differentiation than the
+// previous 5-step ramp so neighbouring tiles in the 0–2 range render
+// in visibly distinct shades.
 export function gapColor(gap) {
   if (gap === null || gap === undefined) return [136, 135, 128] // #888780 — no data
-  if (gap <= 0.05) return [8, 80, 65]    // #085041 — at ecoregion reference
-  if (gap < 0.5)   return [29, 158, 117] // #1D9E75 — minor gap
-  if (gap < 1.5)   return [200, 216, 74] // #C8D84A — moderate gap
-  if (gap < 2.5)   return [244, 166, 35] // #F4A623 — significant gap
-  return [139, 37, 0]                     // #8B2500 — severe gap
+  if (gap <= 0.05) return [8, 80, 65]      // #085041 — at reference
+  if (gap < 0.2)   return [29, 158, 117]   // #1D9E75 — very minor
+  if (gap < 0.4)   return [115, 187, 96]   // #73BB60
+  if (gap < 0.6)   return [200, 216, 74]   // #C8D84A
+  if (gap < 0.8)   return [222, 191, 54]   // #DEBF36
+  if (gap < 1.0)   return [244, 166, 35]   // #F4A623
+  if (gap < 1.2)   return [232, 130, 25]   // #E88219
+  if (gap < 1.4)   return [220, 95, 15]    // #DC5F0F
+  if (gap < 1.6)   return [200, 75, 10]    // #C84B0A
+  if (gap < 1.8)   return [180, 60, 5]     // #B43C05
+  if (gap < 2.0)   return [160, 50, 5]     // #A03205
+  return [139, 37, 0]                       // #8B2500 — severe (2.0+)
 }
 
 // Returns a plain-English label for an HRC score

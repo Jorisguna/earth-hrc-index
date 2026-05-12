@@ -296,10 +296,17 @@ function Legend({ viewMode, gapMode, resolutionLabel }) {
     const title = `Restoration Gap — ${GAP_MODE_LABELS[gapMode]}`
     const stops = [
       { label: '0.0',     color: '#085041', text: 'At reference' },
-      { label: '0–0.5',   color: '#1D9E75', text: 'Minor gap' },
-      { label: '0.5–1.5', color: '#C8D84A', text: 'Moderate gap' },
-      { label: '1.5–2.5', color: '#F4A623', text: 'Significant gap' },
-      { label: '2.5+',    color: '#8B2500', text: 'Severe gap' },
+      { label: '0–0.2',   color: '#1D9E75' },
+      { label: '0.2–0.4', color: '#73BB60' },
+      { label: '0.4–0.6', color: '#C8D84A' },
+      { label: '0.6–0.8', color: '#DEBF36' },
+      { label: '0.8–1.0', color: '#F4A623' },
+      { label: '1.0–1.2', color: '#E88219' },
+      { label: '1.2–1.4', color: '#DC5F0F' },
+      { label: '1.4–1.6', color: '#C84B0A' },
+      { label: '1.6–1.8', color: '#B43C05' },
+      { label: '1.8–2.0', color: '#A03205' },
+      { label: '2.0+',    color: '#8B2500', text: 'Severe gap' },
     ]
     return (
       <div className="legend legend-relative">
