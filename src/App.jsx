@@ -13,8 +13,39 @@ import BioregionCard from './components/BioregionCard'
 import InfoModal from './components/InfoModal'
 import './App.css'
 
-// Free dark basemap from CARTO — no API key needed
-const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
+// Two basemap options the user can toggle between.
+//
+//   - 'dark'      → CARTO dark-matter vector tiles. No API key, free,
+//                   makes the HRC hex colours pop.
+//   - 'satellite' → Esri World Imagery raster tiles. No API key, free
+//                   for non-commercial / showcase use, attribution
+//                   included. Define inline as a minimal MapLibre
+//                   style JSON pointing at the WMTS endpoint.
+const MAP_STYLES = {
+  dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+  satellite: {
+    version: 8,
+    sources: {
+      'esri-world-imagery': {
+        type: 'raster',
+        tiles: [
+          'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        ],
+        tileSize: 256,
+        attribution: '© Esri, Maxar, Earthstar Geographics, and the GIS User Community',
+      },
+    },
+    layers: [
+      {
+        id: 'esri-world-imagery',
+        type: 'raster',
+        source: 'esri-world-imagery',
+        minzoom: 0,
+        maxzoom: 22,
+      },
+    ],
+  },
+}
 
 // Initial camera — centred on the Atlantic to show Wales and SF Bay
 const INITIAL_VIEW_STATE = {
@@ -108,6 +139,38 @@ function ModeIndicator({ viewMode, gapMode }) {
   return (
     <div className="mode-indicator mode-indicator-relative">
       Gap vs. {GAP_MODE_LABELS[gapMode]}
+    </div>
+  )
+}
+
+// Floating panel on the map for basemap + overlay visibility controls.
+// Lives top-right of the map area, separate from the data-view toggles
+// in the headline bar because these don't change WHAT data is shown,
+// only HOW the map underneath looks.
+function MapDisplayControls({ mapStyle, onMapStyleChange, overlayVisible, onOverlayToggle }) {
+  return (
+    <div className="map-display-controls">
+      <div className="view-toggle">
+        <button
+          className={`view-toggle-btn ${mapStyle === 'dark' ? 'active' : ''}`}
+          onClick={() => onMapStyleChange('dark')}
+        >
+          Map
+        </button>
+        <button
+          className={`view-toggle-btn ${mapStyle === 'satellite' ? 'active' : ''}`}
+          onClick={() => onMapStyleChange('satellite')}
+        >
+          Satellite
+        </button>
+      </div>
+      <button
+        className={`view-toggle-btn map-display-overlay-btn ${overlayVisible ? 'active' : ''}`}
+        onClick={() => onOverlayToggle(!overlayVisible)}
+        title={overlayVisible ? 'Hide HRC overlay' : 'Show HRC overlay'}
+      >
+        {overlayVisible ? 'Hide overlay' : 'Show overlay'}
+      </button>
     </div>
   )
 }
@@ -289,6 +352,8 @@ export default function App() {
   const [activeExplainer, setActiveExplainer] = useState(null)
   const [viewMode, setViewMode] = useState('relative')
   const [gapMode, setGapMode] = useState('intact')
+  const [mapStyle, setMapStyle] = useState('dark')
+  const [overlayVisible, setOverlayVisible] = useState(true)
   const debounceTimer = useRef(null)
 
   // Fetch only tiles within the current viewport bounds from Supabase.
@@ -404,6 +469,9 @@ export default function App() {
 
   const gapField = getGapField(gapMode)
 
+  // Hex fill alpha — slightly lower on satellite imagery so the busy
+  // background remains legible underneath.
+  const overlayAlpha = mapStyle === 'satellite' ? 180 : 140
   const layer = new H3HexagonLayer({
     id: 'hrc-tiles',
     // In gap view, exclude tiles with no value for the active gap reference.
@@ -413,7 +481,7 @@ export default function App() {
     getHexagon: d => d.h3Index,
     getFillColor: d => [
       ...(viewMode === 'relative' ? gapColor(d[gapField]) : hrcColor(d.hrc_score)),
-      140,
+      overlayAlpha,
     ],
     getLineColor: [0, 0, 0, 80],
     lineWidthMinPixels: 0.5,
@@ -426,7 +494,7 @@ export default function App() {
     elevationScale: 0,
     extruded: false,
     updateTriggers: {
-      getFillColor: [viewMode, gapMode],
+      getFillColor: [viewMode, gapMode, mapStyle],
       data: [viewMode, gapMode],
     },
   })
@@ -455,12 +523,18 @@ export default function App() {
           viewState={viewState}
           onViewStateChange={handleViewStateChange}
           controller={true}
-          layers={[layer]}
+          layers={overlayVisible ? [layer] : []}
           onClick={handleClick}
           getCursor={({ isHovering }) => isHovering ? 'pointer' : 'grab'}
         >
-          <Map mapStyle={MAP_STYLE} />
+          <Map mapStyle={MAP_STYLES[mapStyle]} />
         </DeckGL>
+        <MapDisplayControls
+          mapStyle={mapStyle}
+          onMapStyleChange={setMapStyle}
+          overlayVisible={overlayVisible}
+          onOverlayToggle={setOverlayVisible}
+        />
       </div>
 
       <Legend

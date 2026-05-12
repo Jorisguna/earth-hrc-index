@@ -465,6 +465,31 @@
   color: #C8D84A;
 }
 
+/* ── Map display controls (top-right floating) ───────────────── */
+.map-display-controls {
+  position: absolute;
+  top: 72px;
+  right: 16px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+}
+
+.map-display-controls .view-toggle {
+  padding: 0;
+  margin: 0;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 4px;
+  backdrop-filter: blur(4px);
+}
+
+.map-display-overlay-btn {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+}
+
 /* ── Mode indicator pill ─────────────────────────────────────── */
 .mode-indicator {
   position: absolute;
