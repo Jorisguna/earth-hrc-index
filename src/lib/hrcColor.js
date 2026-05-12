@@ -47,6 +47,35 @@ export function gapColor(gap) {
   return [139, 37, 0]                       // #8B2500 — severe (2.0+)
 }
 
+// Returns an [R, G, B] array for an annual mean latent heat flux value
+// (W/m²). Higher = more total cooling work delivered. Greener = better.
+// Continuous interpolation across 6 anchor colours spanning the observed
+// v2.1.2 range (~25 W/m² IDF cropland → ~125 W/m² Tapajós interior forest).
+// Continuous (vs the previous 10-step ramp) so neighbouring tiles in the
+// dense 30–45 W/m² IDF cluster render in visibly distinct shades.
+export function coolingWorkColor(wm2) {
+  if (wm2 === null || wm2 === undefined) return [136, 135, 128] // #888780 — no data
+  const t = Math.max(0, Math.min(1, (wm2 - 15) / (110 - 15)))
+  const stops = [
+    [139, 37, 0],    // 15 W/m²   — deep red
+    [212, 85, 10],   // ~34 W/m²  — orange
+    [244, 166, 35],  // ~53 W/m²  — golden yellow
+    [200, 216, 74],  // ~72 W/m²  — yellow-green
+    [115, 187, 96],  // ~91 W/m²  — green
+    [8, 80, 65],     // 110+ W/m² — deep green
+  ]
+  const n = stops.length - 1
+  const idx = Math.min(Math.floor(t * n), n - 1)
+  const localT = t * n - idx
+  const a = stops[idx]
+  const b = stops[idx + 1]
+  return [
+    Math.round(a[0] + (b[0] - a[0]) * localT),
+    Math.round(a[1] + (b[1] - a[1]) * localT),
+    Math.round(a[2] + (b[2] - a[2]) * localT),
+  ]
+}
+
 // Returns a plain-English label for an HRC score
 export function hrcLabel(score) {
   if (score === null || score === undefined) return 'Unknown'

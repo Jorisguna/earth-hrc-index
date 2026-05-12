@@ -80,6 +80,102 @@ export default function BioregionCard({ tile, onClose, onInfo, viewMode, gapMode
   const trendScore = tile.trend_score_60m
   const trendLabel = 'Trend (60-month)'
 
+  // ── Cooling work view — magnitude leads ─────────────────────
+  if (viewMode === 'cooling') {
+    const cw = tile.latent_heat_flux_annual_wm2
+
+    return (
+      <div className="bioregion-card">
+        <button className="close-btn" onClick={onClose} aria-label="Close">✕</button>
+
+        <div className="hrc-score-block">
+          <span className="hrc-score-number">
+            {cw != null ? Math.round(cw) : '—'}
+            {cw != null && (
+              <span style={{ fontSize: '0.5em', marginLeft: '0.2em', opacity: 0.85 }}>W/m²</span>
+            )}
+          </span>
+          <span className="hrc-score-label">
+            Cooling work
+            <InfoBtn onClick={() => onInfo('coolingWork')} />
+          </span>
+          {cw == null && (
+            <span className="hrc-score-status">No v2.1.2 data for this tile</span>
+          )}
+        </div>
+
+        <div className="card-section">
+          <div className="card-row">
+            <span className="card-key">
+              HRC Score
+              <InfoBtn onClick={() => onInfo('hrcScore')} />
+            </span>
+            <span className="card-val">{fmt(hrc)} / 10</span>
+          </div>
+          {tile.restoration_gap != null && (
+            <div className="card-row">
+              <span className="card-key">
+                Restoration gap
+                <InfoBtn onClick={() => onInfo('restorationGap')} />
+              </span>
+              <span className="card-val restoration-gap">+{fmt(tile.restoration_gap)}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="card-section">
+          <div className="card-row">
+            <span className="card-key">
+              Confidence tier
+              <InfoBtn onClick={() => onInfo('confidenceTier')} />
+            </span>
+            <span className="card-val"><span className="tier-badge">{tile.confidence_tier || 'C'}</span></span>
+          </div>
+          {resolutionLabel(tile.data_resolution_m) && (
+            <div className="card-row">
+              <span className="card-key">View</span>
+              <span className="card-val">{resolutionLabel(tile.data_resolution_m)}</span>
+            </div>
+          )}
+          {sourceLabel(tile.data_source) && (
+            <div className="card-row">
+              <span className="card-key">Data source</span>
+              <span className="card-val">{sourceLabel(tile.data_source)}</span>
+            </div>
+          )}
+        </div>
+
+        {tile.ecoregion_name && (
+          <div className="card-section">
+            <div className="card-row">
+              <span className="card-key">
+                Ecoregion
+                <InfoBtn onClick={() => onInfo('ecoregion')} />
+              </span>
+              <span className="card-val">{tile.ecoregion_name}</span>
+            </div>
+            {tile.biome_name && (
+              <div className="card-row">
+                <span className="card-key">
+                  Biome
+                  <InfoBtn onClick={() => onInfo('biome')} />
+                </span>
+                <span className="card-val">{tile.biome_name}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="card-section">
+          <div className="card-row">
+            <span className="card-key">Coordinates</span>
+            <span className="card-val">{fmt(tile.latitude, 4)}°N, {fmt(tile.longitude, 4)}°E</span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // ── Gap view — restoration gap leads ────────────────────────
   if (viewMode === 'relative') {
     const { gap, reference, refLabel, gapNote, explainerKey } = getGapContext(tile, gapMode)

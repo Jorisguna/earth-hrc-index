@@ -7,7 +7,7 @@ import { Map } from 'react-map-gl/maplibre'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
 import { supabase } from './lib/supabase'
-import { hrcColor, gapColor } from './lib/hrcColor'
+import { hrcColor, gapColor, coolingWorkColor } from './lib/hrcColor'
 import { explainers } from './lib/explainers'
 import BioregionCard from './components/BioregionCard'
 import InfoModal from './components/InfoModal'
@@ -102,6 +102,12 @@ function ViewToggle({ viewMode, onChange }) {
       >
         Gap view
       </button>
+      <button
+        className={`view-toggle-btn ${viewMode === 'cooling' ? 'active' : ''}`}
+        onClick={() => onChange('cooling')}
+      >
+        Cooling work
+      </button>
     </div>
   )
 }
@@ -133,6 +139,13 @@ function ModeIndicator({ viewMode, gapMode }) {
     return (
       <div className="mode-indicator">
         Global comparison
+      </div>
+    )
+  }
+  if (viewMode === 'cooling') {
+    return (
+      <div className="mode-indicator">
+        Cooling work (W/m²)
       </div>
     )
   }
@@ -200,6 +213,48 @@ function HeadlineBar({ tiles, loading, onInfo, viewMode, onViewChange, gapMode, 
         {viewMode === 'relative' && (
           <GapModeToggle gapMode={gapMode} onChange={onGapModeChange} onInfo={onInfo} />
         )}
+        <ViewToggle viewMode={viewMode} onChange={onViewChange} />
+      </div>
+    )
+  }
+
+  if (viewMode === 'cooling') {
+    const tilesWithCw = tiles.filter(t => t.latent_heat_flux_annual_wm2 != null)
+    const meanCw = tilesWithCw.length
+      ? tilesWithCw.reduce((sum, t) => sum + t.latent_heat_flux_annual_wm2, 0) / tilesWithCw.length
+      : null
+    const noDataCount = tiles.length - tilesWithCw.length
+
+    return (
+      <div className="headline-bar">
+        {meanCw !== null && (
+          <div className="headline-stat">
+            <span className="headline-number">{Math.round(meanCw)} W/m²</span>
+            <span className="headline-desc">
+              Mean cooling work
+              <InfoBtn onClick={() => onInfo('coolingWork')} />
+            </span>
+          </div>
+        )}
+        <div className="headline-divider" />
+        <div className="headline-stat">
+          <span className="headline-number">{tilesWithCw.length}</span>
+          <span className="headline-desc">
+            v2.1.2 tiles in view
+            <InfoBtn onClick={() => onInfo('tilesLoaded')} />
+          </span>
+        </div>
+        {noDataCount > 0 && (
+          <>
+            <div className="headline-divider" />
+            <div className="headline-stat">
+              <span className="headline-number">{noDataCount}</span>
+              <span className="headline-desc">No data (pre-v2.1.2)</span>
+            </div>
+          </>
+        )}
+        <div className="headline-divider" />
+        <RegionNav onFly={onFly} />
         <ViewToggle viewMode={viewMode} onChange={onViewChange} />
       </div>
     )
@@ -292,6 +347,48 @@ function HeadlineBar({ tiles, loading, onInfo, viewMode, onViewChange, gapMode, 
 }
 
 function Legend({ viewMode, gapMode, resolutionLabel }) {
+  if (viewMode === 'cooling') {
+    // Finer-grained legend at 5 W/m² intervals through the IDF-dense
+    // 20–50 range, then 10 W/m² above; swatches sampled from the
+    // continuous coolingWorkColor gradient.
+    const bins = [
+      { sample: 17,  label: '< 20',    text: 'Minimal' },
+      { sample: 22,  label: '20–25' },
+      { sample: 27,  label: '25–30' },
+      { sample: 32,  label: '30–35' },
+      { sample: 37,  label: '35–40' },
+      { sample: 42,  label: '40–45' },
+      { sample: 47,  label: '45–50' },
+      { sample: 55,  label: '50–60' },
+      { sample: 65,  label: '60–70' },
+      { sample: 75,  label: '70–80' },
+      { sample: 85,  label: '80–90' },
+      { sample: 95,  label: '90–100' },
+      { sample: 115, label: '100+',   text: 'Very high' },
+    ]
+    const rgbToHex = (rgb) => '#' + rgb.map(v => v.toString(16).padStart(2, '0')).join('')
+    return (
+      <div className="legend">
+        <div className="legend-title">Cooling work (W/m²)</div>
+        {bins.map(b => (
+          <div key={b.label} className="legend-row">
+            <span className="legend-swatch" style={{ background: rgbToHex(coolingWorkColor(b.sample)) }} />
+            <span className="legend-range">{b.label}</span>
+            <span className="legend-text">{b.text}</span>
+          </div>
+        ))}
+        <div className="legend-row">
+          <span className="legend-swatch" style={{ background: '#888780' }} />
+          <span className="legend-range">n/a</span>
+          <span className="legend-text">Pre-v2.1.2 tile</span>
+        </div>
+        <div className="legend-subtitle">Annual mean latent heat flux</div>
+        {resolutionLabel && (
+          <div className="legend-subtitle">{resolutionLabel}</div>
+        )}
+      </div>
+    )
+  }
   if (viewMode === 'relative') {
     const title = `Restoration Gap — ${GAP_MODE_LABELS[gapMode]}`
     const stops = [
@@ -491,12 +588,16 @@ export default function App() {
     // icosahedral faces meet. Visible on satellite, hidden on dark.
     highPrecision: true,
     // In gap view, exclude tiles with no value for the active gap reference.
+    // In cooling-work view, keep all tiles (the colour function renders gray
+    // for tiles without a v2.1.2 latent_heat_flux_annual_wm2 value).
     data: viewMode === 'relative'
       ? tiles.filter(t => t[gapField] != null)
       : tiles,
     getHexagon: d => d.h3Index,
     getFillColor: d => [
-      ...(viewMode === 'relative' ? gapColor(d[gapField]) : hrcColor(d.hrc_score)),
+      ...(viewMode === 'relative' ? gapColor(d[gapField])
+         : viewMode === 'cooling' ? coolingWorkColor(d.latent_heat_flux_annual_wm2)
+         : hrcColor(d.hrc_score)),
       overlayAlpha,
     ],
     getLineColor: [0, 0, 0, 80],
