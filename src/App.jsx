@@ -469,9 +469,9 @@ export default function App() {
 
   const gapField = getGapField(gapMode)
 
-  // Hex fill alpha — slightly lower on satellite imagery so the busy
-  // background remains legible underneath.
-  const overlayAlpha = mapStyle === 'satellite' ? 180 : 140
+  // Hex fill alpha — denser on satellite imagery so the colour palette
+  // stays readable against the busy underlying photography.
+  const overlayAlpha = mapStyle === 'satellite' ? 215 : 140
   const layer = new H3HexagonLayer({
     id: 'hrc-tiles',
     // In gap view, exclude tiles with no value for the active gap reference.
