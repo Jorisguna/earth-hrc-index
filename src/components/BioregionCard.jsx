@@ -166,6 +166,20 @@ export default function BioregionCard({ tile, onClose, onInfo, viewMode, gapMode
           )}
         </div>
 
+        {tile.latent_heat_flux_annual_wm2 != null && (
+          <div className="card-section">
+            <div className="card-row">
+              <span className="card-key">
+                Cooling work
+                <InfoBtn onClick={() => onInfo('coolingWork')} />
+              </span>
+              <span className="card-val">
+                {Math.round(tile.latent_heat_flux_annual_wm2)} W/m²
+              </span>
+            </div>
+          </div>
+        )}
+
         {tile.ecoregion_name && (
           <div className="card-section">
             <div className="card-row">
@@ -270,6 +284,20 @@ export default function BioregionCard({ tile, onClose, onInfo, viewMode, gapMode
               <span className="card-val">{tile.biome_name}</span>
             </div>
           )}
+        </div>
+      )}
+
+      {tile.latent_heat_flux_annual_wm2 != null && (
+        <div className="card-section">
+          <div className="card-row">
+            <span className="card-key">
+              Cooling work
+              <InfoBtn onClick={() => onInfo('coolingWork')} />
+            </span>
+            <span className="card-val">
+              {Math.round(tile.latent_heat_flux_annual_wm2)} W/m²
+            </span>
+          </div>
         </div>
       )}
 

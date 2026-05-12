@@ -284,6 +284,23 @@ Why it matters:
 The PM ceiling is the number relevant to investors asking the maximum possible return on a restoration investment. The ecoregion reference shows what is currently achievable; the ceiling shows what physics permits.`,
   },
 
+  coolingWork: {
+    title: 'Cooling Work — Latent Heat Flux Magnitude',
+    body: `The absolute rate at which this tile moves energy upward through evaporation, averaged across the year. Higher values mean more total cooling work delivered.
+
+The HRC score above measures efficiency (the fraction of received energy used for cooling); this number measures magnitude (the total cooling work).
+
+Forests typically deliver more cooling work in absolute terms even when their efficiency ratio looks similar to or below intensively managed cropland, because forests absorb more sunlight to begin with.
+
+Unit: watts per square metre (W/m²), annual mean.
+
+Derivation: computed from the same Penman-Monteith-Leuning v2 evapotranspiration product that feeds the HRC numerator. Conversion: annual_ET_mm/yr × 0.0777, or equivalently annual_latent_heat_J/m²/yr ÷ 31,536,000.
+
+Reference values (regional means):
+  • Île-de-France: 20–40 W/m²
+  • Tapajós humid tropical forest: 60–90 W/m²`,
+  },
+
   evaporativeFraction: {
     title: 'Evaporative Fraction',
     body: `The evaporative fraction is the raw physical measurement that the HRC score is built on. It is a fundamental quantity in surface energy balance science.
