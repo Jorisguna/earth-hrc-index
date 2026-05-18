@@ -1,0 +1,7 @@
+region_code,ecoregion_id,ecoregion_name,biome_num,biome_name,albedo_ref_p25,albedo_ref_p50,albedo_ref_p75,albedo_ref_iqr,centroid_count_kept,pa_coverage_frac,ecoregion_area_km2_local,ecoregion_area_km2_full,albedo_modifier_status,albedo_modifier_disabled_reason
+idf,664,European Atlantic mixed forests,4,Temperate Broadleaf & Mixed Forests,0.12392941176470593,0.13439705882352943,0.14146268656716418,0.017533274802458254,41,0.15795108650795242,2584.8267353706324,385280.9228751177,enabled,
+idf,686,Western European broadleaf forests,4,Temperate Broadleaf & Mixed Forests,,,,999.0,0,0.0,36.85383095126081,492355.3704305709,disabled,insufficient_samples
+tapajos,467,Gurupa várzea,1,Tropical & Subtropical Moist Broadleaf Forests,,,,999.0,0,0.0,44.87982748586494,9925.17059529906,disabled,insufficient_samples
+tapajos,476,Madeira-Tapajós moist forests,1,Tropical & Subtropical Moist Broadleaf Forests,,,,999.0,0,0.546510861453158,4109.979347444617,719644.4653293169,disabled,insufficient_samples
+tapajos,507,Tapajós-Xingu moist forests,1,Tropical & Subtropical Moist Broadleaf Forests,,,,999.0,3,0.1652968893159132,5801.611863218478,336551.3082913841,disabled,insufficient_samples
+tapajos,511,Uatumã-Trombetas moist forests,1,Tropical & Subtropical Moist Broadleaf Forests,,,,999.0,0,0.0,46.357906595830606,472155.7606761731,disabled,insufficient_samples
