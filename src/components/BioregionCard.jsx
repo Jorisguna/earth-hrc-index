@@ -1,4 +1,11 @@
 import { trendColor, hrcLabel } from '../lib/hrcColor'
+import {
+  getActiveScore,
+  getActiveReference,
+  getActiveGap,
+  modifierStatusText,
+  disabledReasonText,
+} from '../lib/methodologyMode'
 
 function fmt(val, decimals = 2) {
   if (val === null || val === undefined) return '—'
@@ -46,9 +53,10 @@ function TrendArrow({ score }) {
 }
 
 // Returns the active gap value, reference value, and display labels for
-// the three reference systems.
-function getGapContext(tile, gapMode) {
-  const hrc = tile.hrc_score
+// the three reference systems. Reads methodologyMode so v2.2 mode pulls
+// the recomputed reference (reference_p90_v2_2 − hrc_score_v2_2) instead
+// of the stored v2.1.x restoration_gap column.
+function getGapContext(tile, gapMode, methodologyMode) {
   if (gapMode === 'historical') {
     const isRecovered = tile.historical_change != null && tile.historical_change > 0.2
     return {
@@ -61,22 +69,35 @@ function getGapContext(tile, gapMode) {
       explainerKey: 'historicalBaseline',
     }
   }
-  // intact (default)
-  const gap = tile.restoration_gap
+  // intact (default) — methodology-aware
   return {
-    gap,
-    reference:    gap != null && hrc != null ? hrc + gap : null,
+    gap:          getActiveGap(tile, methodologyMode, 'intact'),
+    reference:    getActiveReference(tile, methodologyMode, 'intact'),
     refLabel:     'Ecoregion reference',
     gapNote:      'This location could recover this many HRC points if restored to the reference condition for its ecoregion.',
     explainerKey: 'restorationGap',
   }
 }
 
-export default function BioregionCard({ tile, onClose, onInfo, viewMode, gapMode }) {
+// Returns the props for a single "Albedo modifier" row, or null if the
+// tile has no v2.2 fields at all. When the modifier is disabled the
+// secondary line explains why; when enabled it confirms the modifier
+// has been applied (so the user can read the headline number as
+// "albedo-adjusted").
+function modifierRowProps(tile) {
+  const status = modifierStatusText(tile)
+  if (!status) return null
+  return { status, reason: disabledReasonText(tile) }
+}
+
+export default function BioregionCard({ tile, onClose, onInfo, viewMode, gapMode, methodologyMode }) {
   if (!tile) return null
 
-  const hrc = tile.hrc_score
+  const hrc = getActiveScore(tile, methodologyMode)
   const label = hrcLabel(hrc)
+  const modifierRow = methodologyMode === 'v2.2' ? modifierRowProps(tile) : null
+  // Methodology-aware restoration gap for the absolute-view default block
+  const activeIntactGap = getActiveGap(tile, methodologyMode, 'intact')
   const trendScore = tile.trend_score_60m
   const trendLabel = 'Trend (60-month)'
 
@@ -112,14 +133,26 @@ export default function BioregionCard({ tile, onClose, onInfo, viewMode, gapMode
             </span>
             <span className="card-val">{fmt(hrc)} / 10</span>
           </div>
-          {tile.restoration_gap != null && (
+          {activeIntactGap != null && (
             <div className="card-row">
               <span className="card-key">
                 Restoration gap
                 <InfoBtn onClick={() => onInfo('restorationGap')} />
               </span>
-              <span className="card-val restoration-gap">+{fmt(tile.restoration_gap)}</span>
+              <span className="card-val restoration-gap">+{fmt(activeIntactGap)}</span>
             </div>
+          )}
+          {modifierRow && (
+            <div className="card-row">
+              <span className="card-key">
+                Albedo modifier
+                <InfoBtn onClick={() => onInfo('albedoModifier')} />
+              </span>
+              <span className="card-val">{modifierRow.status}</span>
+            </div>
+          )}
+          {modifierRow && modifierRow.reason && (
+            <p className="card-note">{modifierRow.reason}</p>
           )}
         </div>
 
@@ -178,7 +211,7 @@ export default function BioregionCard({ tile, onClose, onInfo, viewMode, gapMode
 
   // ── Gap view — restoration gap leads ────────────────────────
   if (viewMode === 'relative') {
-    const { gap, reference, refLabel, gapNote, explainerKey } = getGapContext(tile, gapMode)
+    const { gap, reference, refLabel, gapNote, explainerKey } = getGapContext(tile, gapMode, methodologyMode)
 
     return (
       <div className="bioregion-card">
@@ -218,6 +251,18 @@ export default function BioregionCard({ tile, onClose, onInfo, viewMode, gapMode
           )}
           {gap != null && (
             <p className="card-note">{gapNote}</p>
+          )}
+          {modifierRow && (
+            <div className="card-row">
+              <span className="card-key">
+                Albedo modifier
+                <InfoBtn onClick={() => onInfo('albedoModifier')} />
+              </span>
+              <span className="card-val">{modifierRow.status}</span>
+            </div>
+          )}
+          {modifierRow && modifierRow.reason && (
+            <p className="card-note">{modifierRow.reason}</p>
           )}
         </div>
 
@@ -397,18 +442,30 @@ export default function BioregionCard({ tile, onClose, onInfo, viewMode, gapMode
         </div>
       )}
 
-      {tile.restoration_gap !== null && tile.restoration_gap !== undefined && (
+      {activeIntactGap != null && (
         <div className="card-section">
           <div className="card-row">
             <span className="card-key">
               Restoration gap
               <InfoBtn onClick={() => onInfo('restorationGap')} />
             </span>
-            <span className="card-val restoration-gap">+{fmt(tile.restoration_gap)}</span>
+            <span className="card-val restoration-gap">+{fmt(activeIntactGap)}</span>
           </div>
           <p className="card-note">
             vs. best intact sites in this ecoregion today
           </p>
+          {modifierRow && (
+            <div className="card-row">
+              <span className="card-key">
+                Albedo modifier
+                <InfoBtn onClick={() => onInfo('albedoModifier')} />
+              </span>
+              <span className="card-val">{modifierRow.status}</span>
+            </div>
+          )}
+          {modifierRow && modifierRow.reason && (
+            <p className="card-note">{modifierRow.reason}</p>
+          )}
         </div>
       )}
 

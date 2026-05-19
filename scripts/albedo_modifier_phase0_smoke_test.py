@@ -81,7 +81,10 @@ PRIORS = [
 ]
 
 WEIGHTS = [0.10, 0.15, 0.20]
-DEFAULT_WEIGHT = 0.15  # Hard gates are calibrated for this weight per §6.2.
+# Phase 1 production weight (project owner decision, 2026-05-18).
+# v1.2 §6.3 hard gates are minimums calibrated at w=0.15; a larger
+# weight produces larger drops, so the same gates still apply at w=0.20.
+DEFAULT_WEIGHT = 0.20
 
 
 def main():

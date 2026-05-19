@@ -128,6 +128,20 @@
   color: #ccc;
 }
 
+/* Reference-centroid legend — sits above the main legend so the two
+   can coexist when the centroids overlay is on. */
+.legend-centroids {
+  bottom: auto;
+  top: 72px;          /* clears the headline bar (~56px) + a small gap */
+  left: 16px;
+  min-width: 220px;
+}
+
+.legend-centroids .legend-label {
+  font-size: 11px;
+  color: #ccc;
+}
+
 /* ── Bioregion card ──────────────────────────────────────── */
 .bioregion-card {
   position: absolute;

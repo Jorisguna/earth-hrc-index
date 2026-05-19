@@ -2,12 +2,19 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import DeckGL from '@deck.gl/react'
 import { WebMercatorViewport, FlyToInterpolator } from '@deck.gl/core'
 import { H3HexagonLayer } from '@deck.gl/geo-layers'
+import { ScatterplotLayer, TextLayer } from '@deck.gl/layers'
 import { latLngToCell } from 'h3-js'
 import { Map } from 'react-map-gl/maplibre'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
 import { supabase } from './lib/supabase'
 import { hrcColor, gapColor, coolingWorkColor } from './lib/hrcColor'
+import {
+  METHODOLOGY_MODES,
+  hasV22Data,
+  getActiveScore,
+  getActiveGap,
+} from './lib/methodologyMode'
 import { explainers } from './lib/explainers'
 import BioregionCard from './components/BioregionCard'
 import InfoModal from './components/InfoModal'
@@ -65,12 +72,6 @@ const REGIONS = [
   { label: 'Tapajós',       longitude: -54.95, latitude: -2.85, zoom: 10 },
 ]
 
-// Maps gapMode to the DB column name used for restoration gap
-function getGapField(gapMode) {
-  if (gapMode === 'historical') return 'restoration_gap_historical'
-  return 'restoration_gap'
-}
-
 const GAP_MODE_LABELS = {
   intact:     'Intact site',
   historical: 'Historical',
@@ -112,6 +113,31 @@ function ViewToggle({ viewMode, onChange }) {
   )
 }
 
+function MethodologyToggle({ methodologyMode, onChange, onInfo }) {
+  // Surfaced only when at least one tile in view has v2.2 data — keeps
+  // the headline bar uncluttered when looking at Wales / LA / SF Bay /
+  // Tapajós (none of which carry v2.2 data yet).
+  return (
+    <div className="gap-mode-toggle methodology-toggle">
+      <span className="gap-mode-label">
+        Methodology
+        {onInfo && <InfoBtn onClick={() => onInfo('methodologyVersion')} />}
+      </span>
+      <div className="gap-mode-btns">
+        {METHODOLOGY_MODES.map(mode => (
+          <button
+            key={mode}
+            className={`gap-mode-btn ${methodologyMode === mode ? 'active' : ''}`}
+            onClick={() => onChange(mode)}
+          >
+            {mode}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function GapModeToggle({ gapMode, onChange, onInfo }) {
   return (
     <div className="gap-mode-toggle">
@@ -130,6 +156,37 @@ function GapModeToggle({ gapMode, onChange, onInfo }) {
           Historical
         </button>
       </div>
+    </div>
+  )
+}
+
+// Small floating panel that explains the reference-centroid colours.
+// Mirrors the Legend pattern — fixed-position, low-profile, on top of
+// the map. Shows a "focused" hint when a tile is selected so the user
+// understands why some dots got bigger.
+function CentroidLegend({ focusedEcoId }) {
+  const rows = [
+    { color: 'rgb(29, 158, 117)',  label: 'Kept (in v2.2 reference)' },
+    { color: 'rgb(228, 126, 34)',  label: 'Rejected — class at centroid is cropland / urban / water' },
+    { color: 'rgb(240, 200, 80)',  label: 'Rejected — cropland surrounds (1 km buffer)' },
+    { color: 'rgb(127, 179, 213)', label: 'Rejected — wetland edge (500 m buffer)' },
+    { color: 'rgb(140, 140, 140)', label: 'Rejected — no albedo / no EF' },
+  ]
+  return (
+    <div className="legend legend-centroids">
+      <div className="legend-title">Reference centroids</div>
+      <div className="legend-subtitle">WDPA centroids feeding the v2.2 albedo reference</div>
+      {rows.map(r => (
+        <div key={r.label} className="legend-row">
+          <span className="legend-swatch" style={{ background: r.color, borderRadius: '50%' }} />
+          <span className="legend-label">{r.label}</span>
+        </div>
+      ))}
+      {focusedEcoId != null && (
+        <div className="legend-subtitle" style={{ marginTop: 6 }}>
+          Centroids for the selected tile&apos;s ecoregion are enlarged.
+        </div>
+      )}
     </div>
   )
 }
@@ -160,7 +217,11 @@ function ModeIndicator({ viewMode, gapMode }) {
 // Lives top-right of the map area, separate from the data-view toggles
 // in the headline bar because these don't change WHAT data is shown,
 // only HOW the map underneath looks.
-function MapDisplayControls({ mapStyle, onMapStyleChange, overlayVisible, onOverlayToggle }) {
+function MapDisplayControls({
+  mapStyle, onMapStyleChange,
+  overlayVisible, onOverlayToggle,
+  centroidsVisible, onCentroidsToggle, centroidsAvailable,
+}) {
   return (
     <div className="map-display-controls">
       <div className="view-toggle">
@@ -184,6 +245,17 @@ function MapDisplayControls({ mapStyle, onMapStyleChange, overlayVisible, onOver
       >
         {overlayVisible ? 'Hide overlay' : 'Show overlay'}
       </button>
+      {centroidsAvailable && (
+        <button
+          className={`view-toggle-btn map-display-overlay-btn ${centroidsVisible ? 'active' : ''}`}
+          onClick={() => onCentroidsToggle(!centroidsVisible)}
+          title={centroidsVisible
+            ? 'Hide intact-reference centroids'
+            : 'Show the WDPA centroids that feed the v2.2 albedo reference'}
+        >
+          {centroidsVisible ? 'Hide reference sites' : 'Show reference sites'}
+        </button>
+      )}
     </div>
   )
 }
@@ -200,8 +272,13 @@ function RegionNav({ onFly }) {
   )
 }
 
-function HeadlineBar({ tiles, loading, onInfo, viewMode, onViewChange, gapMode, onGapModeChange, onFly }) {
-  const gapField = getGapField(gapMode)
+function HeadlineBar({
+  tiles, loading, onInfo, viewMode, onViewChange,
+  gapMode, onGapModeChange, methodologyMode, onMethodologyChange, onFly,
+}) {
+  // The methodology toggle only matters when at least one loaded tile
+  // has v2.2 data — otherwise it would imply a choice with no effect.
+  const v22Available = tiles.some(hasV22Data)
 
   if (loading || !tiles.length) {
     return (
@@ -212,6 +289,13 @@ function HeadlineBar({ tiles, loading, onInfo, viewMode, onViewChange, gapMode, 
         <RegionNav onFly={onFly} />
         {viewMode === 'relative' && (
           <GapModeToggle gapMode={gapMode} onChange={onGapModeChange} onInfo={onInfo} />
+        )}
+        {v22Available && (
+          <MethodologyToggle
+            methodologyMode={methodologyMode}
+            onChange={onMethodologyChange}
+            onInfo={onInfo}
+          />
         )}
         <ViewToggle viewMode={viewMode} onChange={onViewChange} />
       </div>
@@ -255,18 +339,33 @@ function HeadlineBar({ tiles, loading, onInfo, viewMode, onViewChange, gapMode, 
         )}
         <div className="headline-divider" />
         <RegionNav onFly={onFly} />
+        {v22Available && (
+          <MethodologyToggle
+            methodologyMode={methodologyMode}
+            onChange={onMethodologyChange}
+            onInfo={onInfo}
+          />
+        )}
         <ViewToggle viewMode={viewMode} onChange={onViewChange} />
       </div>
     )
   }
 
   if (viewMode === 'relative') {
-    const tilesWithGap = tiles.filter(t => t[gapField] != null)
+    // Under v2.2 mode the per-tile gap is recomputed from
+    // reference_p90_v2_2 − hrc_score_v2_2; under v2.1.1 mode it stays
+    // on the stored `restoration_gap` column. Historical mode is
+    // methodology-agnostic and reads restoration_gap_historical.
+    const activeGapForTile = (t) =>
+      gapMode === 'historical'
+        ? t.restoration_gap_historical
+        : getActiveGap(t, methodologyMode, gapMode)
+    const tilesWithGap = tiles.filter(t => activeGapForTile(t) != null)
     const meanGap = tilesWithGap.length
-      ? tilesWithGap.reduce((sum, t) => sum + t[gapField], 0) / tilesWithGap.length
+      ? tilesWithGap.reduce((sum, t) => sum + activeGapForTile(t), 0) / tilesWithGap.length
       : null
-    const priorityCount = tilesWithGap.filter(t => t[gapField] > 1.0).length
-    const atReferenceCount = tilesWithGap.filter(t => t[gapField] <= 0.1).length
+    const priorityCount = tilesWithGap.filter(t => activeGapForTile(t) > 1.0).length
+    const atReferenceCount = tilesWithGap.filter(t => activeGapForTile(t) <= 0.1).length
 
     return (
       <div className="headline-bar">
@@ -298,17 +397,27 @@ function HeadlineBar({ tiles, loading, onInfo, viewMode, onViewChange, gapMode, 
         <div className="headline-divider" />
         <RegionNav onFly={onFly} />
         <GapModeToggle gapMode={gapMode} onChange={onGapModeChange} onInfo={onInfo} />
+        {v22Available && (
+          <MethodologyToggle
+            methodologyMode={methodologyMode}
+            onChange={onMethodologyChange}
+            onInfo={onInfo}
+          />
+        )}
         <ViewToggle viewMode={viewMode} onChange={onViewChange} />
       </div>
     )
   }
 
   // Absolute view
-  const tilesWithGap = tiles.filter(t => t.restoration_gap != null)
+  const tilesWithGap = tiles.filter(t => getActiveGap(t, methodologyMode, 'intact') != null)
   const meanGap = tilesWithGap.length
-    ? tilesWithGap.reduce((sum, t) => sum + t.restoration_gap, 0) / tilesWithGap.length
+    ? tilesWithGap.reduce((sum, t) => sum + getActiveGap(t, methodologyMode, 'intact'), 0) / tilesWithGap.length
     : null
-  const mean = tiles.reduce((sum, t) => sum + (t.hrc_score || 0), 0) / tiles.length
+  const scoredTiles = tiles.filter(t => getActiveScore(t, methodologyMode) != null)
+  const mean = scoredTiles.length
+    ? scoredTiles.reduce((sum, t) => sum + getActiveScore(t, methodologyMode), 0) / scoredTiles.length
+    : 0
 
   return (
     <div className="headline-bar">
@@ -341,6 +450,13 @@ function HeadlineBar({ tiles, loading, onInfo, viewMode, onViewChange, gapMode, 
       )}
       <div className="headline-divider" />
       <RegionNav onFly={onFly} />
+      {v22Available && (
+        <MethodologyToggle
+          methodologyMode={methodologyMode}
+          onChange={onMethodologyChange}
+          onInfo={onInfo}
+        />
+      )}
       <ViewToggle viewMode={viewMode} onChange={onViewChange} />
     </div>
   )
@@ -461,9 +577,28 @@ export default function App() {
   const [activeExplainer, setActiveExplainer] = useState(null)
   const [viewMode, setViewMode] = useState('relative')
   const [gapMode, setGapMode] = useState('intact')
+  // 'v2.2' (default) reads hrc_score_v2_2 / reference_p90_v2_2 when
+  // available, falling back to v2.1.x columns for tiles without v2.2
+  // data. 'v2.1.1' forces v2.1.x display even when v2.2 is present.
+  const [methodologyMode, setMethodologyMode] = useState('v2.2')
   const [mapStyle, setMapStyle] = useState('dark')
   const [overlayVisible, setOverlayVisible] = useState(true)
+  // WDPA reference centroids that feed the v2.2 albedo modifier.
+  // Loaded once from /public/idf_reference_centroids.json (produced by
+  // scripts/convert_centroid_audit_to_json.py from script 38's audit CSV).
+  // The file is optional — when absent the toggle stays hidden.
+  const [centroids, setCentroids] = useState(null)
+  const [centroidsVisible, setCentroidsVisible] = useState(false)
   const debounceTimer = useRef(null)
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/idf_reference_centroids.json')
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => { if (!cancelled && Array.isArray(data)) setCentroids(data) })
+      .catch(() => { /* missing file → leave centroids null and toggle hidden */ })
+    return () => { cancelled = true }
+  }, [])
 
   // Fetch only tiles within the current viewport bounds from Supabase.
   // This scales to large datasets — only what's on screen is ever loaded.
@@ -576,7 +711,14 @@ export default function App() {
     }
   }, [])
 
-  const gapField = getGapField(gapMode)
+  // In gap view we colour tiles by the active gap value. For the intact
+  // reference this is methodology-aware (reads v2.2 gap when in v2.2
+  // mode and a v2.2 reference exists; otherwise the stored
+  // restoration_gap). Historical gap is methodology-agnostic and uses
+  // the stored column directly.
+  const activeGapForTile = (t) =>
+    gapMode === 'historical' ? t.restoration_gap_historical
+                              : getActiveGap(t, methodologyMode, 'intact')
 
   // Hex fill alpha — denser on satellite imagery so the colour palette
   // stays readable against the busy underlying photography.
@@ -591,13 +733,13 @@ export default function App() {
     // In cooling-work view, keep all tiles (the colour function renders gray
     // for tiles without a v2.1.2 latent_heat_flux_annual_wm2 value).
     data: viewMode === 'relative'
-      ? tiles.filter(t => t[gapField] != null)
+      ? tiles.filter(t => activeGapForTile(t) != null)
       : tiles,
     getHexagon: d => d.h3Index,
     getFillColor: d => [
-      ...(viewMode === 'relative' ? gapColor(d[gapField])
+      ...(viewMode === 'relative' ? gapColor(activeGapForTile(d))
          : viewMode === 'cooling' ? coolingWorkColor(d.latent_heat_flux_annual_wm2)
-         : hrcColor(d.hrc_score)),
+         : hrcColor(getActiveScore(d, methodologyMode))),
       overlayAlpha,
     ],
     getLineColor: [0, 0, 0, 80],
@@ -611,10 +753,128 @@ export default function App() {
     elevationScale: 0,
     extruded: false,
     updateTriggers: {
-      getFillColor: [viewMode, gapMode, mapStyle],
-      data: [viewMode, gapMode],
+      getFillColor: [viewMode, gapMode, methodologyMode, mapStyle],
+      data: [viewMode, gapMode, methodologyMode],
     },
   })
+
+  // Reference-centroid overlay. The selected tile's ecoregion_id (if
+  // any) decides which centroids get the "focused" treatment — larger
+  // radius + opaque fill — so the user can see exactly which WDPA
+  // centroids contribute to the reference that the focused tile is
+  // being compared against. Colours encode the trust-filter outcome:
+  // green for kept (in the reference), orange/blue/grey for the
+  // three rejection reasons.
+  const CENTROID_KEPT       = [29, 158, 117]   // matches "intact" green
+  const CENTROID_REJ_LC     = [228, 126, 34]   // class 12/13/14/17 at centroid
+  const CENTROID_REJ_CROP   = [240, 200, 80]   // v2.2.1 — 1 km cropland buffer
+  const CENTROID_REJ_WET    = [127, 179, 213]  // 500 m wetland-buffer reject
+  const CENTROID_REJ_OTHER  = [140, 140, 140]  // no_albedo / no_ef / unknown
+  function centroidColor(c) {
+    if (c.keep) return CENTROID_KEPT
+    if (c.reject_reason === 'lc_class_rejected')       return CENTROID_REJ_LC
+    if (c.reject_reason === 'cropland_buffer_exceeds') return CENTROID_REJ_CROP
+    if (c.reject_reason === 'wetland_buffer_exceeds')  return CENTROID_REJ_WET
+    return CENTROID_REJ_OTHER
+  }
+  const focusedEcoId = selectedTile ? selectedTile.ecoregion_id : null
+
+  // Hover tooltip for the centroid overlay. Returns a Deck.gl tooltip
+  // descriptor object when the user hovers a centroid; null elsewhere so
+  // hovering the underlying H3 hex grid doesn't trigger a tooltip
+  // (the click-to-open BioregionCard handles tiles).
+  const getCentroidTooltip = ({ object, layer }) => {
+    if (!object || !layer || layer.id !== 'reference-centroids') return null
+    const fmt2 = (v) => (v == null ? '—' : Number(v).toFixed(2))
+    const fmt3 = (v) => (v == null ? '—' : Number(v).toFixed(3))
+    const status = object.keep ? 'Kept (feeds reference)' : `Rejected — ${object.reject_reason || 'unknown'}`
+    const wb = object.wetland_buffer_frac
+    const cb = object.cropland_buffer_frac
+    const lines = [
+      `<div style="font-weight:600;font-size:12px;margin-bottom:4px;">${object.pa_name || '(unnamed PA)'}</div>`,
+      `<div style="font-size:11px;color:#aaa;margin-bottom:6px;">IUCN ${object.iucn_cat || '—'} · ${object.ecoregion_name || '—'}</div>`,
+      `<div style="font-size:11px;color:${object.keep ? '#1D9E75' : '#E47E22'};margin-bottom:6px;">${status}</div>`,
+      `<div style="font-size:11px;">HRC v2.1.1: ${fmt2(object.hrc_v2_1_1)} &nbsp;|&nbsp; Albedo: ${fmt3(object.albedo)}</div>`,
+      `<div style="font-size:11px;">EF: ${fmt3(object.ef)} &nbsp;|&nbsp; LC: ${object.lc_type1 ?? '—'}</div>`,
+      (wb != null || cb != null)
+        ? `<div style="font-size:11px;color:#888;margin-top:4px;">Wetland buffer: ${fmt2(wb)} &nbsp;|&nbsp; Cropland buffer: ${fmt2(cb)}</div>`
+        : '',
+    ]
+    return {
+      html: lines.filter(Boolean).join(''),
+      style: {
+        background: 'rgba(15,15,15,0.95)',
+        color: '#eee',
+        border: '1px solid rgba(255,255,255,0.12)',
+        borderRadius: '6px',
+        padding: '8px 10px',
+        maxWidth: '260px',
+        pointerEvents: 'none',
+      },
+    }
+  }
+
+  // Text labels next to each centroid showing the HRC v2.1.1 value. Lets
+  // the user compare against the ecoregion reference at a glance without
+  // hovering. Skip rendering text when the centroid has no HRC value
+  // (e.g. no_albedo / no_ef rejections).
+  const centroidLabelData = (centroidsVisible && centroids && centroids.length)
+    ? centroids.filter(c => c.hrc_v2_1_1 != null)
+    : null
+
+  const centroidLabelLayer = centroidLabelData
+    ? new TextLayer({
+        id: 'reference-centroid-labels',
+        data: centroidLabelData,
+        getPosition: d => [d.longitude, d.latitude],
+        getText: d => d.hrc_v2_1_1.toFixed(2),
+        getSize: 11,
+        sizeUnits: 'pixels',
+        getColor: [255, 255, 255, 235],
+        // Halo so the text reads clearly on light cropland + dark forest.
+        outlineWidth: 2,
+        outlineColor: [0, 0, 0, 220],
+        fontSettings: { sdf: true },
+        // Sit the label just to the right of the dot so neither
+        // occludes the other. 12 px right of the centroid.
+        getPixelOffset: [12, 0],
+        getTextAnchor: 'start',
+        getAlignmentBaseline: 'center',
+        pickable: false,    // dots handle hover; labels stay transparent to clicks
+      })
+    : null
+
+  const centroidLayer = (centroidsVisible && centroids && centroids.length)
+    ? new ScatterplotLayer({
+        id: 'reference-centroids',
+        data: centroids,
+        getPosition: d => [d.longitude, d.latitude],
+        getFillColor: d => {
+          const [r, g, b] = centroidColor(d)
+          const focused = focusedEcoId != null && d.ecoregion_id === focusedEcoId
+          return [r, g, b, focused ? 245 : 170]
+        },
+        getLineColor: d => {
+          const focused = focusedEcoId != null && d.ecoregion_id === focusedEcoId
+          return focused ? [255, 255, 255, 220] : [0, 0, 0, 150]
+        },
+        getRadius: d => {
+          const focused = focusedEcoId != null && d.ecoregion_id === focusedEcoId
+          return focused ? 380 : 220   // metres
+        },
+        radiusMinPixels: 5,
+        radiusMaxPixels: 18,
+        lineWidthMinPixels: 1,
+        stroked: true,
+        filled: true,
+        pickable: true,
+        updateTriggers: {
+          getFillColor: [focusedEcoId],
+          getLineColor: [focusedEcoId],
+          getRadius:    [focusedEcoId],
+        },
+      })
+    : null
 
   return (
     <div className="app-container">
@@ -626,6 +886,8 @@ export default function App() {
         onViewChange={setViewMode}
         gapMode={gapMode}
         onGapModeChange={setGapMode}
+        methodologyMode={methodologyMode}
+        onMethodologyChange={setMethodologyMode}
         onFly={flyTo}
       />
 
@@ -640,8 +902,13 @@ export default function App() {
           viewState={viewState}
           onViewStateChange={handleViewStateChange}
           controller={true}
-          layers={overlayVisible ? [layer] : []}
+          layers={[
+            overlayVisible ? layer : null,
+            centroidLayer,
+            centroidLabelLayer,
+          ].filter(Boolean)}
           onClick={handleClick}
+          getTooltip={getCentroidTooltip}
           getCursor={({ isHovering }) => isHovering ? 'pointer' : 'grab'}
         >
           <Map mapStyle={MAP_STYLES[mapStyle]} />
@@ -651,7 +918,13 @@ export default function App() {
           onMapStyleChange={setMapStyle}
           overlayVisible={overlayVisible}
           onOverlayToggle={setOverlayVisible}
+          centroidsVisible={centroidsVisible}
+          onCentroidsToggle={setCentroidsVisible}
+          centroidsAvailable={centroids != null && centroids.length > 0}
         />
+        {centroidsVisible && centroids && centroids.length > 0 && (
+          <CentroidLegend focusedEcoId={selectedTile && selectedTile.ecoregion_id} />
+        )}
       </div>
 
       <Legend
@@ -675,6 +948,7 @@ export default function App() {
           onInfo={setActiveExplainer}
           viewMode={viewMode}
           gapMode={gapMode}
+          methodologyMode={methodologyMode}
         />
       )}
 

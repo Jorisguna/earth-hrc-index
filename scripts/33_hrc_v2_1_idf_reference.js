@@ -33,6 +33,18 @@
 var BBOX = ee.Geometry.Rectangle([2.4, 48.3, 3.2, 48.7]);
 var YEAR_START = '2023-01-01';
 var YEAR_END   = '2024-01-01';
+var LANDCOVER_YEAR = '2023-01-01';
+
+// v2.2.1 patch (2026-05-19) — mirror the cropland-buffer filter that
+// scripts 38 and 31_..._v2_2.js use, so the v2.1.x reference produced
+// here is methodology-consistent with the v2.2 reference. The original
+// script 33 used no land-cover gate; the buffer check rejects centroids
+// where >25% of a 1 km neighbourhood is cropland (MCD12Q1 LC_Type1 in
+// {12, 13, 14}). Catches PA polygon centroids that land in mosaic
+// farmland (typically PNRs at IUCN V — but I-IV centroids can also
+// occasionally fall in non-intact patches).
+var CROPLAND_BUFFER_RADIUS = 1000;
+var CROPLAND_BUFFER_MAX    = 0.25;
 
 Map.centerObject(BBOX, 9);
 
@@ -106,6 +118,15 @@ var netRnSafe = netRnAnnualJ.where(netRnAnnualJ.lte(0), 0.001);
 var hrcImage = latentHeatAnnualJ.divide(netRnSafe).min(1).max(0)
                  .multiply(10).rename('hrc_score').toFloat();
 
+// ── v2.2.1 — MCD12Q1 cropland/urban mask for the 1 km buffer check ───
+var landcover = ee.ImageCollection('MODIS/061/MCD12Q1')
+  .filterDate(LANDCOVER_YEAR, '2024-01-01')
+  .first()
+  .select('LC_Type1')
+  .clip(BBOX);
+var croplandOrUrban = landcover.eq(12).or(landcover.eq(13)).or(landcover.eq(14))
+                                .rename('cul');
+
 // ── Step 2: Filter WDPA — IUCN I–IV, Designated ──────────────────────
 // Process guide §6.2: drop MARINE filter (field empty), keep STATUS gate.
 var wdpa = ee.FeatureCollection('WCMC/WDPA/current/polygons')
@@ -115,23 +136,44 @@ var wdpa = ee.FeatureCollection('WCMC/WDPA/current/polygons')
 
 print('WDPA IUCN I–IV designated PA count in IDF box (expect ~66):', wdpa.size());
 
-// ── Step 3: Sample HRC at each PA centroid ───────────────────────────
-var centroids = wdpa.map(function(pa) {
-  var centroid = pa.geometry().centroid(ee.ErrorMargin(100));
+// ── Step 3: Sample HRC + cropland-buffer at each PA centroid ────────
+// v2.2.1 — adds cropland_buffer_frac for the 1 km neighbourhood check.
+// Rejects centroids whose 1 km surround is >25% cropland/urban so the
+// v2.1.x reference here uses the same trust mechanism as the v2.2
+// reference (scripts 38 + 31_..._v2_2.js).
+var centroidsRaw = wdpa.map(function(pa) {
+  var centroid   = pa.geometry().centroid(ee.ErrorMargin(100));
+  var cropBuffer = centroid.buffer(CROPLAND_BUFFER_RADIUS);
   var hrcVal = hrcImage.reduceRegion({
     reducer:   ee.Reducer.first(),
     geometry:  centroid,
     scale:     500,
     maxPixels: 1e4
   });
-  return ee.Feature(centroid, {
-    hrc_score: hrcVal.get('hrc_score'),
-    pa_name:   pa.get('NAME'),
-    iucn_cat:  pa.get('IUCN_CAT')
+  var croplandFrac = croplandOrUrban.reduceRegion({
+    reducer:   ee.Reducer.mean(),
+    geometry:  cropBuffer,
+    scale:     500,
+    maxPixels: 1e4
   });
-}).filter(ee.Filter.notNull(['hrc_score']));
+  return ee.Feature(centroid, {
+    hrc_score:            hrcVal.get('hrc_score'),
+    cropland_buffer_frac: croplandFrac.get('cul'),
+    pa_name:              pa.get('NAME'),
+    iucn_cat:             pa.get('IUCN_CAT')
+  });
+});
 
-print('Centroid samples with valid HRC:', centroids.size());
+var centroids = centroidsRaw
+  .filter(ee.Filter.notNull(['hrc_score']))
+  .filter(ee.Filter.lte('cropland_buffer_frac', CROPLAND_BUFFER_MAX));
+
+print('Centroid samples — raw / after cropland buffer:',
+  ee.Dictionary({
+    raw: centroidsRaw.size(),
+    kept: centroids.size()
+  })
+);
 
 // ── Step 4: Load RESOLVE ecoregions ──────────────────────────────────
 var resolve = ee.FeatureCollection('RESOLVE/ECOREGIONS/2017')

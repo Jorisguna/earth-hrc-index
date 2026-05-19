@@ -319,4 +319,46 @@ Reference values:
 
 The HRC score is simply the evaporative fraction multiplied by 10, making it easier to read and communicate while preserving the underlying physics exactly.`,
   },
+
+  methodologyVersion: {
+    title: 'Methodology — v2.1.1 vs v2.2',
+    body: `Two methodology versions are available for the same tile:
+
+  • v2.1.1 — the original Heat Regulation Capacity score: ten times the evaporative fraction. Treats two pixels with the same evaporative fraction identically, regardless of how the surface looks.
+
+  • v2.2 — adds an ecoregion-relative albedo modifier. A degraded forest patch whose surface is brighter than the local intact-forest reference loses a small fraction of its score; an intact pixel is left effectively unchanged. The modifier is gated per-ecoregion: where the trust-the-data check fails, the score falls back to v2.1.1 behaviour (and the per-tile detail card shows that the modifier is inactive for that ecoregion).
+
+The v2.2 formula:
+  HRC v2.2 = 10 × EF × (1 − 0.20 × albedo_deficit_norm)
+
+Where albedo_deficit_norm = clip(max(pixel_albedo − ecoregion_reference_albedo, 0) / ecoregion_reference_albedo, 0, 1).
+
+By construction:
+  • A pixel at or below its ecoregion's intact reference albedo (deficit = 0) scores exactly the v2.1.1 value.
+  • A pixel at the full penalty cap (deficit = 1) scores 20% less than v2.1.1.
+  • The penalty scales with both the deficit and the original evaporative fraction.
+
+Currently deployed: v2.2 for Île-de-France. Tapajós continues on v2.1.1 (its protected-area pattern requires a different reference method that is still being built). Wales, Los Angeles, and SF Bay are not in scope for v2.2.
+
+Choose v2.1.1 above to see the original score throughout the application. Choose v2.2 to see the albedo-modifier-adjusted score where it is available. Tiles without v2.2 data display their v2.1.1 score in either mode.
+
+For the full derivation see docs/HRC_higher_fidelity_methodology_v2_2.md.`,
+  },
+
+  albedoModifier: {
+    title: 'Albedo modifier — what it adds to the score',
+    body: `The v2.2 albedo modifier is an ecosystem-health correction layered on top of the evaporative-fraction Heat Regulation Capacity score. It captures one signal the pure evaporative-fraction formula misses: a degraded surface that has lost its dark canopy and now reflects more sunlight back to space.
+
+Two specific cases motivate the modifier:
+
+  • Degraded forest patches in vegetated ecoregions — a clearance patch in a rainforest landscape has low evaporative fraction and anomalously high albedo versus the surrounding intact forest reference. The pure evaporative fraction reads it as "slightly underperforming"; the albedo signal confirms the degradation.
+
+  • Bright sealed urban surfaces — light-coloured roofs and concrete have very low evaporative fraction (no cooling) and high broadband albedo. The albedo signal is independent confirmation of the absence of cooling.
+
+The modifier is ecoregion-relative — a pixel is compared against its own ecoregion's typical intact albedo, not against a global benchmark. This is important: legitimate reflective surfaces (Greenland ice, the Sahara) are compared against their own intact reference, not a tropical forest, so the modifier does not invert the meaning of the score in those regions. A separate Phase 2 deferral handles cryosphere biomes (where lost albedo should also be penalised — currently the formula only penalises positive deficits).
+
+The modifier is gated. Where an ecoregion does not have enough intact protected area to compute a reliable reference, the modifier is disabled and the score falls back to the evaporative-fraction-only v2.1.1 form. The disabled state is surfaced explicitly on every tile so the user can see which ecoregions are running on the fallback.
+
+Production weight: w = 0.20 (project owner decision May 2026). At this weight, a pixel at the full penalty cap loses 20% of its v2.1.1 score; most real-world degraded pixels lose 2–5%.`,
+  },
 }
