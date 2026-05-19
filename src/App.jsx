@@ -720,9 +720,15 @@ export default function App() {
     gapMode === 'historical' ? t.restoration_gap_historical
                               : getActiveGap(t, methodologyMode, 'intact')
 
-  // Hex fill alpha — denser on satellite imagery so the colour palette
-  // stays readable against the busy underlying photography.
-  const overlayAlpha = mapStyle === 'satellite' ? 215 : 140
+  // On satellite, hexes render as a coloured ring with a fully
+  // transparent centre so the imagery shows through. The fill stays
+  // present (alpha 0) so clicks still register on the hex interior.
+  const isSatellite = mapStyle === 'satellite'
+  const overlayAlpha = isSatellite ? 0 : 140
+  const getHexColorRgb = d =>
+    viewMode === 'relative' ? gapColor(activeGapForTile(d))
+    : viewMode === 'cooling' ? coolingWorkColor(d.latent_heat_flux_annual_wm2)
+    : hrcColor(getActiveScore(d, methodologyMode))
   const layer = new H3HexagonLayer({
     id: 'hrc-tiles',
     // H3 hex grid sits on an icosahedron projection; without
@@ -736,14 +742,17 @@ export default function App() {
       ? tiles.filter(t => activeGapForTile(t) != null)
       : tiles,
     getHexagon: d => d.h3Index,
-    getFillColor: d => [
-      ...(viewMode === 'relative' ? gapColor(activeGapForTile(d))
-         : viewMode === 'cooling' ? coolingWorkColor(d.latent_heat_flux_annual_wm2)
-         : hrcColor(getActiveScore(d, methodologyMode))),
-      overlayAlpha,
-    ],
-    getLineColor: [0, 0, 0, 80],
-    lineWidthMinPixels: 0.5,
+    getFillColor: d => [...getHexColorRgb(d), overlayAlpha],
+    getLineColor: isSatellite
+      ? d => [...getHexColorRgb(d), 120]
+      : [0, 0, 0, 80],
+    // Satellite: width in meters so the ring scales with zoom (thicker
+    // when zoomed in). ~60 m ≈ 15–18% of a res-9 hex diameter.
+    // Dark basemap keeps a thin constant-pixel hairline.
+    lineWidthUnits: isSatellite ? 'meters' : 'pixels',
+    getLineWidth: isSatellite ? 200 : 0.5,
+    lineWidthMinPixels: isSatellite ? 2 : 0.5,
+    lineWidthMaxPixels: isSatellite ? 100 : 1,
     stroked: true,
     filled: true,
     pickable: true,
@@ -754,6 +763,7 @@ export default function App() {
     extruded: false,
     updateTriggers: {
       getFillColor: [viewMode, gapMode, methodologyMode, mapStyle],
+      getLineColor: [viewMode, gapMode, methodologyMode, mapStyle],
       data: [viewMode, gapMode, methodologyMode],
     },
   })
