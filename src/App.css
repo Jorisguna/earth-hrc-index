@@ -142,6 +142,22 @@
   color: #ccc;
 }
 
+/* Raw-pixel legend — offset to the right of legend-centroids so the two
+   don't overlap if both overlays happen to be toggled on at once (they
+   cover different regions — IDF vs. Mead — but the toggles are
+   independent). */
+.legend-pixels {
+  bottom: auto;
+  top: 72px;
+  left: 260px;
+  min-width: 220px;
+}
+
+.legend-pixels .legend-label {
+  font-size: 11px;
+  color: #ccc;
+}
+
 /* ── Bioregion card ──────────────────────────────────────── */
 .bioregion-card {
   position: absolute;

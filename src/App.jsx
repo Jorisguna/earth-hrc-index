@@ -70,7 +70,20 @@ const REGIONS = [
   // v2.1.1 higher-fidelity showcase regions — zoom 10 to land in the 500 m tier
   { label: 'Île-de-France', longitude: 2.8,    latitude: 48.5,  zoom: 10 },
   { label: 'Tapajós',       longitude: -54.95, latitude: -2.85, zoom: 10 },
+  // 30 m OpenET demonstration tier — zoom 14 to resolve the two tower
+  // hex clusters (US-Ne1/US-Ne2 sit ~540 m apart, each a handful of
+  // ~65 m H3 res-10 hexes). Midpoint between the two towers.
+  { label: 'Mead, NE', longitude: -96.4734, latitude: 41.1650, zoom: 14 },
 ]
+
+// Cooling Work value for a tile, tier-agnostic. The 500 m PML tier
+// (Wales/LA/SFBay/IDF/Tapajós) stores a true 12-month annual mean in
+// latent_heat_flux_annual_wm2; the 30 m OpenET tier stores a winter-masked
+// mean in annual_mean_le_wm2 (migration 009) — deliberately a different
+// column, not a shared one, so the two are never silently averaged
+// together as if they meant the same thing. This accessor only picks
+// whichever one applies to a given tile; it never combines them.
+const coolingWorkValue = (t) => t.latent_heat_flux_annual_wm2 ?? t.annual_mean_le_wm2
 
 const GAP_MODE_LABELS = {
   intact:     'Intact site',
@@ -191,6 +204,28 @@ function CentroidLegend({ focusedEcoId }) {
   )
 }
 
+// Mirrors CentroidLegend — explains the raw-pixel overlay's quality_state
+// colours so "why is this dot amber" is answered on the map itself.
+function PixelLegend() {
+  const rows = [
+    { color: 'rgb(61, 174, 118)',  label: 'ok — no month capped or missing' },
+    { color: 'rgb(235, 158, 52)',  label: 'capped — ≥1 month capped at EF = 1.0 (Q1)' },
+    { color: 'rgb(92, 156, 214)',  label: 'month_masked — ≥1 month missing (energy/coverage)' },
+  ]
+  return (
+    <div className="legend legend-pixels">
+      <div className="legend-title">Raw 30 m pixels</div>
+      <div className="legend-subtitle">OpenET pixels feeding each Mead H3 hex (mean of these = the hex score)</div>
+      {rows.map(r => (
+        <div key={r.label} className="legend-row">
+          <span className="legend-swatch" style={{ background: r.color, borderRadius: '50%' }} />
+          <span className="legend-label">{r.label}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function ModeIndicator({ viewMode, gapMode }) {
   if (viewMode === 'absolute') {
     return (
@@ -221,6 +256,7 @@ function MapDisplayControls({
   mapStyle, onMapStyleChange,
   overlayVisible, onOverlayToggle,
   centroidsVisible, onCentroidsToggle, centroidsAvailable,
+  pixelsVisible, onPixelsToggle, pixelsAvailable,
 }) {
   return (
     <div className="map-display-controls">
@@ -254,6 +290,17 @@ function MapDisplayControls({
             : 'Show the WDPA centroids that feed the v2.2 albedo reference'}
         >
           {centroidsVisible ? 'Hide reference sites' : 'Show reference sites'}
+        </button>
+      )}
+      {pixelsAvailable && (
+        <button
+          className={`view-toggle-btn map-display-overlay-btn ${pixelsVisible ? 'active' : ''}`}
+          onClick={() => onPixelsToggle(!pixelsVisible)}
+          title={pixelsVisible
+            ? 'Hide raw 30 m pixels'
+            : 'Show the raw 30 m OpenET pixels behind the Mead hex aggregate'}
+        >
+          {pixelsVisible ? 'Hide raw pixels' : 'Show raw pixels'}
         </button>
       )}
     </div>
@@ -303,11 +350,17 @@ function HeadlineBar({
   }
 
   if (viewMode === 'cooling') {
-    const tilesWithCw = tiles.filter(t => t.latent_heat_flux_annual_wm2 != null)
+    const tilesWithCw = tiles.filter(t => coolingWorkValue(t) != null)
     const meanCw = tilesWithCw.length
-      ? tilesWithCw.reduce((sum, t) => sum + t.latent_heat_flux_annual_wm2, 0) / tilesWithCw.length
+      ? tilesWithCw.reduce((sum, t) => sum + coolingWorkValue(t), 0) / tilesWithCw.length
       : null
     const noDataCount = tiles.length - tilesWithCw.length
+    // G7: the 30 m tier's Cooling Work figure is winter-masked (some
+    // months genuinely excluded — see months_masked on the Bioregion
+    // Card), not a true 12-month annual mean like every other tier's.
+    // The label discloses that rather than implying the same "annual
+    // mean" the v2.1.2 tiers show.
+    const anyWinterMasked = tiles.some(t => t.temporal_qualifier === 'annual_winter_masked')
 
     return (
       <div className="headline-bar">
@@ -315,7 +368,7 @@ function HeadlineBar({
           <div className="headline-stat">
             <span className="headline-number">{Math.round(meanCw)} W/m²</span>
             <span className="headline-desc">
-              Mean cooling work
+              {anyWinterMasked ? 'Mean cooling work (winter-masked)' : 'Mean cooling work'}
               <InfoBtn onClick={() => onInfo('coolingWork')} />
             </span>
           </div>
@@ -324,11 +377,11 @@ function HeadlineBar({
         <div className="headline-stat">
           <span className="headline-number">{tilesWithCw.length}</span>
           <span className="headline-desc">
-            v2.1.2 tiles in view
+            {anyWinterMasked ? 'tiles in view' : 'v2.1.2 tiles in view'}
             <InfoBtn onClick={() => onInfo('tilesLoaded')} />
           </span>
         </div>
-        {noDataCount > 0 && (
+        {noDataCount > 0 && !anyWinterMasked && (
           <>
             <div className="headline-divider" />
             <div className="headline-stat">
@@ -589,6 +642,14 @@ export default function App() {
   // The file is optional — when absent the toggle stays hidden.
   const [centroids, setCentroids] = useState(null)
   const [centroidsVisible, setCentroidsVisible] = useState(false)
+  // Raw 30 m OpenET pixels feeding the Mead (US-Ne1/US-Ne2) H3 res-10 hex
+  // aggregate. hrc_tiles only ever stores the aggregated hex rows (see
+  // scripts/aggregate.js) — this file is the pixel-level provenance for
+  // those hexes, same pattern as the IDF reference centroids above.
+  // Loaded from /public/mead_ne_pixel_provenance.json (produced by
+  // scripts/aggregate.js on every run, dry-run or not).
+  const [pixelProvenance, setPixelProvenance] = useState(null)
+  const [pixelsVisible, setPixelsVisible] = useState(false)
   const debounceTimer = useRef(null)
 
   useEffect(() => {
@@ -597,6 +658,15 @@ export default function App() {
       .then(r => (r.ok ? r.json() : null))
       .then(data => { if (!cancelled && Array.isArray(data)) setCentroids(data) })
       .catch(() => { /* missing file → leave centroids null and toggle hidden */ })
+    return () => { cancelled = true }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/mead_ne_pixel_provenance.json')
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => { if (!cancelled && Array.isArray(data)) setPixelProvenance(data) })
+      .catch(() => { /* missing file → leave pixelProvenance null and toggle hidden */ })
     return () => { cancelled = true }
   }, [])
 
@@ -658,15 +728,19 @@ export default function App() {
       setError('Could not load tile data. Please check your .env file.')
     } else {
       // Snap each tile to its H3 cell at the resolution matching its data source:
-      //   - 9000m (ERA5-Land Tier C) → H3 res 5 (~9.8km edge)
-      //   - 500m  (PML_V2 v2.1)      → H3 res 8 (~530m edge)
-      //   - 70m   (ECOSTRESS, future) → H3 res 10 (~75m edge)
+      //   - 9000m (ERA5-Land Tier C)      → H3 res 5 (~9.8km edge)
+      //   - 500m  (PML_V2 v2.1)           → H3 res 8 (~530m edge)
+      //   - 70m   (ECOSTRESS, future)     → H3 res 10 (~75m edge)
+      //   - 30m   (OpenET US test sites)  → H3 res 10 (~65m edge, per the
+      //            30m US-sites aggregate step). Without this branch a 30m
+      //            tile falls through to res 5 and renders as a 9.8km blob.
       // Deduplicate by h3Index — H3 indices are unique per resolution, so
       // tiles at different tiers don't collide.
       const seen = new Set()
       const hexTiles = (data || []).reduce((acc, t) => {
         const h3Res = t.data_resolution_m === 500 ? 8
                     : t.data_resolution_m === 70  ? 10
+                    : t.data_resolution_m === 30  ? 10
                     : 5
         const h3Index = latLngToCell(t.latitude, t.longitude, h3Res)
         if (!seen.has(h3Index)) {
@@ -727,7 +801,7 @@ export default function App() {
   const overlayAlpha = isSatellite ? 0 : 140
   const getHexColorRgb = d =>
     viewMode === 'relative' ? gapColor(activeGapForTile(d))
-    : viewMode === 'cooling' ? coolingWorkColor(d.latent_heat_flux_annual_wm2)
+    : viewMode === 'cooling' ? coolingWorkColor(coolingWorkValue(d))
     : hrcColor(getActiveScore(d, methodologyMode))
   const layer = new H3HexagonLayer({
     id: 'hrc-tiles',
@@ -824,6 +898,51 @@ export default function App() {
     }
   }
 
+  // Colour-codes the raw-pixel overlay by quality_state — mirrors the
+  // capped > month_masked > ok priority migration 009 defines for the
+  // aggregated hex rows, so a pixel's dot colour explains why the hex it
+  // feeds looks the way it does.
+  const PIXEL_OK            = [61, 174, 118]
+  const PIXEL_CAPPED        = [235, 158, 52]
+  const PIXEL_MONTH_MASKED  = [92, 156, 214]
+  function pixelColor(p) {
+    if (p.quality_state === 'capped') return PIXEL_CAPPED
+    if (p.quality_state === 'month_masked') return PIXEL_MONTH_MASKED
+    return PIXEL_OK
+  }
+
+  // Hover tooltip for the raw-pixel overlay. Same null-guard pattern as
+  // getCentroidTooltip so hovering the hex grid or the centroid overlay
+  // doesn't trigger this one instead.
+  const getPixelTooltip = ({ object, layer }) => {
+    if (!object || !layer || layer.id !== 'mead-ne-pixel-provenance') return null
+    const fmt2 = (v) => (v == null ? '—' : Number(v).toFixed(2))
+    const fmt0 = (v) => (v == null ? '—' : Number(v).toFixed(0))
+    const lines = [
+      `<div style="font-weight:600;font-size:12px;margin-bottom:4px;">30 m OpenET pixel</div>`,
+      `<div style="font-size:11px;color:${
+        object.quality_state === 'capped' ? '#EB9E34'
+          : object.quality_state === 'month_masked' ? '#5C9CD6'
+          : '#3DAE76'
+      };margin-bottom:6px;">${object.quality_state}</div>`,
+      `<div style="font-size:11px;">HRC (capped): ${fmt2(object.hrc_score)} &nbsp;|&nbsp; uncapped: ${fmt2(object.hrc_raw_ratio)}</div>`,
+      `<div style="font-size:11px;">Cooling work: ${fmt0(object.annual_mean_le_wm2)} W/m²</div>`,
+      `<div style="font-size:11px;color:#888;margin-top:4px;">Months capped: ${object.months_capped ?? 0} &nbsp;|&nbsp; masked: ${object.months_masked ?? 0}</div>`,
+    ]
+    return {
+      html: lines.join(''),
+      style: {
+        background: 'rgba(15,15,15,0.95)',
+        color: '#eee',
+        border: '1px solid rgba(255,255,255,0.12)',
+        borderRadius: '6px',
+        padding: '8px 10px',
+        maxWidth: '260px',
+        pointerEvents: 'none',
+      },
+    }
+  }
+
   // Text labels next to each centroid showing the HRC v2.1.1 value. Lets
   // the user compare against the ecoregion reference at a glance without
   // hovering. Skip rendering text when the centroid has no HRC value
@@ -886,6 +1005,30 @@ export default function App() {
       })
     : null
 
+  // Raw 30 m OpenET pixels behind the Mead H3 res-10 hex aggregate — see
+  // scripts/aggregate.js. Small, tightly-clustered dots (native pixel
+  // spacing is 30 m) so they read as "texture inside the hex" rather than
+  // competing with it visually.
+  const pixelLayer = (pixelsVisible && pixelProvenance && pixelProvenance.length)
+    ? new ScatterplotLayer({
+        id: 'mead-ne-pixel-provenance',
+        data: pixelProvenance,
+        getPosition: d => [d.longitude, d.latitude],
+        getFillColor: d => {
+          const [r, g, b] = pixelColor(d)
+          return [r, g, b, 190]
+        },
+        getLineColor: [0, 0, 0, 130],
+        getRadius: 14,   // metres — roughly half the 30 m pixel spacing
+        radiusMinPixels: 3,
+        radiusMaxPixels: 9,
+        lineWidthMinPixels: 1,
+        stroked: true,
+        filled: true,
+        pickable: true,
+      })
+    : null
+
   return (
     <div className="app-container">
       <HeadlineBar
@@ -916,9 +1059,10 @@ export default function App() {
             overlayVisible ? layer : null,
             centroidLayer,
             centroidLabelLayer,
+            pixelLayer,
           ].filter(Boolean)}
           onClick={handleClick}
-          getTooltip={getCentroidTooltip}
+          getTooltip={(info) => getCentroidTooltip(info) || getPixelTooltip(info)}
           getCursor={({ isHovering }) => isHovering ? 'pointer' : 'grab'}
         >
           <Map mapStyle={MAP_STYLES[mapStyle]} />
@@ -931,9 +1075,15 @@ export default function App() {
           centroidsVisible={centroidsVisible}
           onCentroidsToggle={setCentroidsVisible}
           centroidsAvailable={centroids != null && centroids.length > 0}
+          pixelsVisible={pixelsVisible}
+          onPixelsToggle={setPixelsVisible}
+          pixelsAvailable={pixelProvenance != null && pixelProvenance.length > 0}
         />
         {centroidsVisible && centroids && centroids.length > 0 && (
           <CentroidLegend focusedEcoId={selectedTile && selectedTile.ecoregion_id} />
+        )}
+        {pixelsVisible && pixelProvenance && pixelProvenance.length > 0 && (
+          <PixelLegend />
         )}
       </div>
 
@@ -941,7 +1091,9 @@ export default function App() {
         viewMode={viewMode}
         gapMode={gapMode}
         resolutionLabel={
-          tiles.some(t => t.data_resolution_m === 500)
+          tiles.some(t => t.data_resolution_m === 30)
+            ? '30 m plot-scale view (OpenET demonstration tier)'
+            : tiles.some(t => t.data_resolution_m === 500)
             ? '500 m neighbourhood view'
             : tiles.length > 0
             ? '9 km regional view'

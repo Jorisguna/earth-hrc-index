@@ -1,0 +1,13 @@
+site_code,tower_id,regime,year,month,n_halfhours,coverage,sum_le,sum_netrad,sum_g,sum_h,mean_avail_wm2,ef_rn_g,ef_turbulent,closure,excluded,note
+tonzi_vaira_ca,US-Ton,blue_oak_savanna,2023,1,984,0.661,25171.3,28477.8,-3698.4,3996.5,32.7,0.7823,0.8643,0.9065,False,
+tonzi_vaira_ca,US-Ton,blue_oak_savanna,2023,2,1004,0.747,22568.2,42031.9,-3775.1,21851.1,45.6,0.4927,0.5081,0.9697,False,
+tonzi_vaira_ca,US-Ton,blue_oak_savanna,2023,3,892,0.599,42015.2,82998.4,-829.7,34487.1,94.0,0.5012,0.5511,0.9126,False,
+tonzi_vaira_ca,US-Ton,blue_oak_savanna,2023,4,716,0.497,58481.6,112630.9,1614.7,40710.0,155.1,0.5268,0.5978,0.8935,True,low_coverage
+tonzi_vaira_ca,US-Ton,blue_oak_savanna,2023,5,1154,0.776,100511.4,237046.7,3281.4,103591.0,202.6,0.43,0.505,0.8731,False,
+tonzi_vaira_ca,US-Ton,blue_oak_savanna,2023,6,1308,0.908,52329.3,241291.8,5140.8,163528.5,180.5,0.2216,0.2461,0.9141,False,
+tonzi_vaira_ca,US-Ton,blue_oak_savanna,2023,7,1337,0.899,47063.3,236080.9,9724.8,169197.2,169.3,0.2079,0.2209,0.9554,False,
+tonzi_vaira_ca,US-Ton,blue_oak_savanna,2023,8,1288,0.866,28189.2,194096.9,8300.8,148740.8,144.3,0.1517,0.1611,0.9523,False,
+tonzi_vaira_ca,US-Ton,blue_oak_savanna,2023,9,1264,0.878,22775.2,138152.4,1090.1,112383.7,108.4,0.1662,0.1716,0.9861,False,
+tonzi_vaira_ca,US-Ton,blue_oak_savanna,2023,10,1278,0.859,21180.2,85544.6,-1624.6,61289.6,68.2,0.243,0.2577,0.9461,False,
+tonzi_vaira_ca,US-Ton,blue_oak_savanna,2023,11,1250,0.868,23483.0,32786.4,-5797.5,17939.3,30.9,0.6086,0.5669,1.0736,False,
+tonzi_vaira_ca,US-Ton,blue_oak_savanna,2023,12,1143,0.768,16209.8,16569.0,-3960.8,7379.5,18.0,0.7896,0.6872,1.149,True,low_energy

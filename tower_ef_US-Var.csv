@@ -1,0 +1,13 @@
+site_code,tower_id,regime,year,month,n_halfhours,coverage,sum_le,sum_netrad,sum_g,sum_h,mean_avail_wm2,ef_rn_g,ef_turbulent,closure,excluded,note
+tonzi_vaira_ca,US-Var,annual_c3_grassland,2023,1,944,0.634,26852.8,26720.7,-4426.3,7064.3,33.0,0.8621,0.7917,1.0889,False,
+tonzi_vaira_ca,US-Var,annual_c3_grassland,2023,2,1021,0.76,33813.8,42114.0,-4009.4,12561.6,45.2,0.7331,0.7291,1.0055,False,
+tonzi_vaira_ca,US-Var,annual_c3_grassland,2023,3,901,0.606,53655.2,89807.5,239.8,24981.3,99.4,0.599,0.6823,0.878,False,
+tonzi_vaira_ca,US-Var,annual_c3_grassland,2023,4,1326,0.921,124384.1,201760.8,4624.7,41260.6,148.7,0.631,0.7509,0.8403,False,
+tonzi_vaira_ca,US-Var,annual_c3_grassland,2023,5,1104,0.742,69433.6,188784.9,7592.4,81557.5,164.1,0.3832,0.4599,0.8333,False,
+tonzi_vaira_ca,US-Var,annual_c3_grassland,2023,6,1332,0.925,12516.0,217951.9,13315.9,154344.4,153.6,0.0612,0.075,0.8154,False,
+tonzi_vaira_ca,US-Var,annual_c3_grassland,2023,7,1395,0.938,4188.5,206547.4,14830.5,152645.2,137.4,0.0218,0.0267,0.818,False,
+tonzi_vaira_ca,US-Var,annual_c3_grassland,2023,8,1369,0.92,3293.1,172342.8,10822.9,130237.9,118.0,0.0204,0.0247,0.8267,False,
+tonzi_vaira_ca,US-Var,annual_c3_grassland,2023,9,1196,0.831,10885.0,116222.6,2912.4,90939.4,94.7,0.0961,0.1069,0.8986,False,
+tonzi_vaira_ca,US-Var,annual_c3_grassland,2023,10,1320,0.887,13719.5,81782.2,-1720.5,67553.3,63.3,0.1643,0.1688,0.9733,False,
+tonzi_vaira_ca,US-Var,annual_c3_grassland,2023,11,1235,0.858,18584.7,40679.6,-5639.8,32493.2,37.5,0.4012,0.3639,1.1027,False,
+tonzi_vaira_ca,US-Var,annual_c3_grassland,2023,12,1062,0.714,18735.2,29538.5,-3357.6,14763.2,31.0,0.5695,0.5593,1.0183,False,

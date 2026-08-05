@@ -1,0 +1,13 @@
+site_code,tower_id,regime,year,month,n_halfhours,coverage,sum_le,sum_netrad,sum_g,sum_h,mean_avail_wm2,ef_rn_g,ef_turbulent,closure,excluded,note
+mead_ne,US-Ne2,irrigated_maize_soy_rotation,2023,1,704,0.946,7664.1,7691.8,-5241.3,4890.6,18.4,0.5926,0.6098,0.9707,True,low_energy
+mead_ne,US-Ne2,irrigated_maize_soy_rotation,2023,2,558,0.83,15406.3,26069.7,618.4,5886.7,45.6,0.6053,0.7208,0.8366,False,
+mead_ne,US-Ne2,irrigated_maize_soy_rotation,2023,3,596,0.801,19407.3,44577.8,2216.8,22141.5,71.1,0.4581,0.4624,0.9808,False,
+mead_ne,US-Ne2,irrigated_maize_soy_rotation,2023,4,213,0.296,4383.5,25508.9,1361.2,18698.8,113.4,0.1815,0.1899,0.9559,True,low_coverage
+mead_ne,US-Ne2,irrigated_maize_soy_rotation,2023,5,487,0.655,11669.1,63105.8,6745.1,36448.5,115.7,0.207,0.256,0.8537,False,
+mead_ne,US-Ne2,irrigated_maize_soy_rotation,2023,6,679,0.943,70008.2,99422.5,4049.6,15387.3,140.5,0.734,0.8406,0.8954,False,
+mead_ne,US-Ne2,irrigated_maize_soy_rotation,2023,7,664,0.892,74570.9,94526.4,1193.1,6417.4,140.6,0.799,0.9303,0.8677,False,
+mead_ne,US-Ne2,irrigated_maize_soy_rotation,2023,8,680,0.914,79138.1,98225.2,1444.1,4194.3,142.3,0.8177,0.9533,0.861,False,
+mead_ne,US-Ne2,irrigated_maize_soy_rotation,2023,9,716,0.994,43530.6,80684.2,146.0,23994.0,112.5,0.5405,0.6485,0.8384,False,
+mead_ne,US-Ne2,irrigated_maize_soy_rotation,2023,10,726,0.976,18147.7,44721.2,-7729.5,29763.3,72.2,0.346,0.3753,0.9134,False,
+mead_ne,US-Ne2,irrigated_maize_soy_rotation,2023,11,716,0.994,8973.7,19138.8,-5511.2,13317.5,34.4,0.364,0.4026,0.9043,False,
+mead_ne,US-Ne2,irrigated_maize_soy_rotation,2023,12,710,0.954,7861.7,10536.7,-4140.1,8880.5,20.7,0.5357,0.4643,1.1407,True,low_energy

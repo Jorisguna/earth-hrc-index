@@ -23,13 +23,80 @@ function resolutionLabel(m) {
   if (m === 9000) return '9 km regional view'
   if (m === 500)  return '500 m neighbourhood view'
   if (m === 70)   return '70 m parcel view'
+  if (m === 30)   return '30 m plot-scale view'
   return null
 }
 
 function sourceLabel(src) {
-  if (src === 'ERA5_LAND_9km') return 'Tier C reanalysis (regional)'
-  if (src === 'PML_V2_500m')   return 'Higher fidelity (showcase)'
+  if (src === 'ERA5_LAND_9km')            return 'Tier C reanalysis (regional)'
+  if (src === 'PML_V2_500m')              return 'Higher fidelity (showcase)'
+  if (src === 'mead_ne_landsat_30m_2023') return 'OpenET ensemble, 30 m (demonstration tier)'
   return null
+}
+
+// Cooling Work value for a tile, tier-agnostic — mirrors the accessor in
+// App.jsx. The 500 m PML tier stores a true 12-month annual mean in
+// latent_heat_flux_annual_wm2; the 30 m OpenET tier stores a winter-masked
+// mean in annual_mean_le_wm2 (migration 009). Never averaged together —
+// this just picks whichever one applies to this tile.
+function coolingWorkValue(t) {
+  return t.latent_heat_flux_annual_wm2 ?? t.annual_mean_le_wm2
+}
+
+// US-Ne1/US-Ne2 combined interannual HRC range, 2019–2024, computed from
+// AmeriFlux tower data (tower_ef_mead_interannual_summary_v1_0.csv) —
+// Q6's "cheap version": a caveat sentence rather than a second satellite
+// view/toggle. 2023 (what the tile shows) sits inside this range in 5 of
+// 6 years; this is the disclosure for the one it doesn't.
+const MEAD_INTERANNUAL_RANGE = { min: 5.46, max: 6.56 }
+
+// Q1 (EF capping) + Q6 (single-year scope) disclosures for the 30 m tier.
+// months_capped/months_masked are NULL outside this tier (migration 009),
+// so this renders nothing for every other region's tiles.
+function MeadQualityRows({ tile }) {
+  if (tile.months_capped == null && tile.months_masked == null) return null
+  return (
+    <>
+      {tile.months_capped > 0 && (
+        <div className="card-row">
+          <span className="card-key" style={{ color: '#E67E22' }}>⚠ Capped</span>
+          <span className="card-val" style={{ color: '#E67E22' }}>
+            {tile.months_capped} mo. at EF = 1.0 (uncapped {fmt(tile.hrc_raw_ratio)})
+          </span>
+        </div>
+      )}
+      {tile.months_masked > 0 && (
+        <div className="card-row">
+          <span className="card-key">Months excluded</span>
+          <span className="card-val">{tile.months_masked} (missing energy/coverage data)</span>
+        </div>
+      )}
+    </>
+  )
+}
+
+function MeadCaveatNote({ tile }) {
+  if (tile.region_code !== 'mead_ne') return null
+  return (
+    <p className="card-note">
+      2023 is a single satellite-computed year. AmeriFlux tower records (2019–2024) show HRC at
+      these towers ranging {MEAD_INTERANNUAL_RANGE.min.toFixed(2)}–{MEAD_INTERANNUAL_RANGE.max.toFixed(2)} across years.
+    </p>
+  )
+}
+
+// Falls back to the pre-existing generic warning for tiers that predate
+// months_capped (every tier except the 30 m one) but still occasionally
+// clip EF at the [0,10] bound.
+function LegacyCapNote({ tile }) {
+  if (tile.months_capped != null) return null   // 30 m tier — MeadQualityRows handles it
+  if (tile.hrc_raw_ratio == null || tile.hrc_raw_ratio <= 10) return null
+  return (
+    <div className="card-row">
+      <span className="card-key" style={{ color: '#E67E22' }}>⚠ Note</span>
+      <span className="card-val" style={{ color: '#E67E22' }}>Computed at energy-balance limit</span>
+    </div>
+  )
 }
 
 function referenceMethodLabel(method) {
@@ -103,7 +170,8 @@ export default function BioregionCard({ tile, onClose, onInfo, viewMode, gapMode
 
   // ── Cooling work view — magnitude leads ─────────────────────
   if (viewMode === 'cooling') {
-    const cw = tile.latent_heat_flux_annual_wm2
+    const cw = coolingWorkValue(tile)
+    const isWinterMasked = tile.temporal_qualifier === 'annual_winter_masked'
 
     return (
       <div className="bioregion-card">
@@ -117,7 +185,7 @@ export default function BioregionCard({ tile, onClose, onInfo, viewMode, gapMode
             )}
           </span>
           <span className="hrc-score-label">
-            Cooling work
+            {isWinterMasked ? 'Cooling work (winter-masked)' : 'Cooling work'}
             <InfoBtn onClick={() => onInfo('coolingWork')} />
           </span>
           {cw == null && (
@@ -176,7 +244,10 @@ export default function BioregionCard({ tile, onClose, onInfo, viewMode, gapMode
               <span className="card-val">{sourceLabel(tile.data_source)}</span>
             </div>
           )}
+          <MeadQualityRows tile={tile} />
+          <LegacyCapNote tile={tile} />
         </div>
+        <MeadCaveatNote tile={tile} />
 
         {tile.ecoregion_name && (
           <div className="card-section">
@@ -293,12 +364,8 @@ export default function BioregionCard({ tile, onClose, onInfo, viewMode, gapMode
               <span className="card-val">{sourceLabel(tile.data_source)}</span>
             </div>
           )}
-          {tile.hrc_raw_ratio != null && tile.hrc_raw_ratio > 10 && (
-            <div className="card-row">
-              <span className="card-key" style={{ color: '#E67E22' }}>⚠ Note</span>
-              <span className="card-val" style={{ color: '#E67E22' }}>Computed at energy-balance limit</span>
-            </div>
-          )}
+          <MeadQualityRows tile={tile} />
+          <LegacyCapNote tile={tile} />
           {referenceMethodLabel(tile.reference_method) && (
             <div className="card-row">
               <span className="card-key">Reference</span>
@@ -306,16 +373,17 @@ export default function BioregionCard({ tile, onClose, onInfo, viewMode, gapMode
             </div>
           )}
         </div>
+        <MeadCaveatNote tile={tile} />
 
-        {tile.latent_heat_flux_annual_wm2 != null && (
+        {coolingWorkValue(tile) != null && (
           <div className="card-section">
             <div className="card-row">
               <span className="card-key">
-                Cooling work
+                {tile.temporal_qualifier === 'annual_winter_masked' ? 'Cooling work (winter-masked)' : 'Cooling work'}
                 <InfoBtn onClick={() => onInfo('coolingWork')} />
               </span>
               <span className="card-val">
-                {Math.round(tile.latent_heat_flux_annual_wm2)} W/m²
+                {Math.round(coolingWorkValue(tile))} W/m²
               </span>
             </div>
           </div>
@@ -393,12 +461,8 @@ export default function BioregionCard({ tile, onClose, onInfo, viewMode, gapMode
             <span className="card-val">{sourceLabel(tile.data_source)}</span>
           </div>
         )}
-        {tile.hrc_raw_ratio != null && tile.hrc_raw_ratio > 10 && (
-          <div className="card-row">
-            <span className="card-key" style={{ color: '#E67E22' }}>⚠ Note</span>
-            <span className="card-val" style={{ color: '#E67E22' }}>Computed at energy-balance limit</span>
-          </div>
-        )}
+        <MeadQualityRows tile={tile} />
+        <LegacyCapNote tile={tile} />
         {referenceMethodLabel(tile.reference_method) && (
           <div className="card-row">
             <span className="card-key">Reference</span>
@@ -406,6 +470,7 @@ export default function BioregionCard({ tile, onClose, onInfo, viewMode, gapMode
           </div>
         )}
       </div>
+      <MeadCaveatNote tile={tile} />
 
       {tile.ecoregion_name && (
         <div className="card-section">
@@ -428,15 +493,15 @@ export default function BioregionCard({ tile, onClose, onInfo, viewMode, gapMode
         </div>
       )}
 
-      {tile.latent_heat_flux_annual_wm2 != null && (
+      {coolingWorkValue(tile) != null && (
         <div className="card-section">
           <div className="card-row">
             <span className="card-key">
-              Cooling work
+              {tile.temporal_qualifier === 'annual_winter_masked' ? 'Cooling work (winter-masked)' : 'Cooling work'}
               <InfoBtn onClick={() => onInfo('coolingWork')} />
             </span>
             <span className="card-val">
-              {Math.round(tile.latent_heat_flux_annual_wm2)} W/m²
+              {Math.round(coolingWorkValue(tile))} W/m²
             </span>
           </div>
         </div>
